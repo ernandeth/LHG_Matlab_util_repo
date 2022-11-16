@@ -1,0 +1,69 @@
+SERVER bunuel ANY 5353
+VENDOR MLM
+#
+# Mathworks MATLAB V7.0 Release-14 License
+#
+# --------------------------------------------------------------------
+#
+# Mendling with Feature lines will only invalidate them!
+# Don't forget to set MLM_LICENSE_FILE to point to the saved LICENSE.LIC
+#
+# --------------------------------------------------------------------
+#
+PACKAGE EFA-MLM-01 MLM 2011.060 F070503187A3DCE30B7C \
+	COMPONENTS="Aerospace_Blockset Bioinformatics_Toolbox \
+	CDMA_IS95_Blocks CDMA_Reference_Blockset Communication_Blocks \
+	Communication_Toolbox Compiler Control_System_Toolbox \
+	Control_Toolbox Curve_Fitting_Toolbox Data_Acq_Toolbox \
+	Database_Toolbox Datafeed_Toolbox Dial_and_Gauge_Blocks \
+	Embedded_Target_c166 Embedded_Target_c2000 \
+	Embedded_Target_c6000 Embedded_Target_hc12 \
+	Embedded_Target_MPC555 Embedded_Target_osek Excel_Link \
+	Extend_Symbolic_Toolbox Filter_Design_HDL_Coder \
+	Filter_Design_Toolbox Fin_Derivatives_Toolbox \
+	Fin_Time_Series_Toolbox Financial_Derivatives_Toolbox \
+	Financial_Time_Series_Toolbox Financial_Toolbox \
+	Fixed-Point_Blocks Fixed-Point_Toolbox Fixed_Income_Toolbox \
+	Fixed_Point_Toolbox Fuzzy_Logic_Toolbox Fuzzy_Toolbox \
+	GADS_Toolbox Garch_Toolbox \
+	Genetic_Algorithm_and_Direct_Search_Toolbox \
+	Identification_Toolbox Image_Acquisition_Toolbox \
+	Image_Processing_Toolbox Image_Toolbox Instr_Control_Toolbox \
+	Link_for_ModelSim LMI_Control_Toolbox MAP_Toolbox MATLAB \
+	MATLAB_COM_Builder MATLAB_Compiler MATLAB_Excel_Builder"
+PACKAGE EFA-MLM-02 MLM 2011.060 5060E0812C324A799201 \
+	COMPONENTS="MATLAB_Link_for_CCS MATLAB_Report_Gen \
+	MATLAB_Report_Generator MATLAB_Runtime_Server \
+	MATLAB_Web_Server MBC_Toolbox Model-Based_Calibration_Toolbox \
+	Model_Predictive_Control_Toolbox MPC_Toolbox \
+	Mu-Analysis_and_Synthesis_Toolbox Mu_Synthesis_Toolbox \
+	NCD_Toolbox Neural_Network_Toolbox OPC_Toolbox \
+	Optimization_Toolbox Partial_Differential_Equation_Toolbox \
+	PDE_Toolbox Power_System_Blocks Real-Time_Win_Target \
+	Real-Time_Windows_Target Real-Time_Workshop \
+	Real-Time_Workshop_Embedded_Coder \
+	Requirements_Management_Interface RF_Blockset RF_Toolbox \
+	Robust_Control_Toolbox Robust_Toolbox RTW_Embedded_Coder \
+	Signal_Blocks Signal_Processing_Blockset \
+	Signal_Processing_Toolbox Signal_Toolbox SimMechanics \
+	SimPowerSystems Simulink Simulink_Accelerator \
+	Simulink_Control_Design Simulink_Fixed_Point \
+	Simulink_Param_Estimation Simulink_Parameter_Estimation \
+	Simulink_Performance_Tools SIMULINK_Report_Gen \
+	Simulink_Report_Generator Simulink_Response_Optimization \
+	Simulink_Verification_and_Validation \
+	SL_Verification_Validation Spline_Toolbox Stateflow \
+	Stateflow_Coder Statistics_Toolbox"
+PACKAGE EFA-MLM-03 MLM 2011.060 50B0B0317BBFE107C0F4 \
+	COMPONENTS="Symbolic_Math_Toolbox Symbolic_Toolbox \
+	System_Identification_Toolbox Team_EFA TMW_Archive \
+	Virtual_Reality_Toolbox Wavelet_Toolbox XPC_Embedded_Option \
+	XPC_Target"
+INCREMENT EFA-MLM-01 MLM 2011.060 21-jun-2011 uncounted \
+	DD705B2533FE288E50E2 HOSTID=ANY SN=12345678
+INCREMENT EFA-MLM-02 MLM 2011.060 21-jun-2011 uncounted \
+	DD705B05311A1B9A6CE3 HOSTID=ANY SN=12345678
+INCREMENT EFA-MLM-03 MLM 2011.060 21-jun-2011 uncounted \
+	BDB06BE54B1E269254E4 HOSTID=ANY SN=12345678
+# --------------------------------------------------------------------
+

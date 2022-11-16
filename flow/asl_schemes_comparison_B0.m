@@ -1,0 +1,128 @@
+% comparison between labeting schemes
+
+
+bat = 1.4;
+f = 50/6000 ; % ml/s*g
+Disp = 100;
+
+dt = 1e-3;  % the time steps are 1 ms.  
+
+r1a = 1/1.65;
+T1gm = 1.3;
+
+% @0.55T   
+%(run this bit after running the code once with the 3T constants)
+%
+vsai_inp_3t = vsai_inp;
+pcasl_inp_3t = pcasl_inp;
+
+vsai_sig_3t = vsai_sig;
+pcasl_sig_3t = pcasl_sig;
+
+r1a = 1/1.100;
+T1gm = 0.700;
+%}
+
+ttmp = linspace(0,10, 10/dt)';
+decay = ones(size(ttmp));
+decay = exp(- ttmp  *r1a);
+
+input = zeros(size(ttmp));
+
+% arterial dispersion for pulsed input
+p_art_kernel = ttmp.* exp(-Disp/2 *ttmp);
+p_art_kernel(ttmp <= 0) = 0;
+p_art_kernel = p_art_kernel / sum(p_art_kernel);  %normalize the mass in the dispersion
+
+% Arterial dispersion and decay Kernel for continuous input
+art_kernel = ttmp.^(bat*Disp) .* exp(-Disp *ttmp);
+art_kernel(ttmp <= 0) = 0;
+art_kernel = abs(art_kernel);
+art_kernel = art_kernel / sum(art_kernel);  %normalize the mass in the dispersion
+
+
+
+% scheme 1  : saturation based velocity selective ASL
+vsasl_inp = input;
+vsasl_inp(1:1.5/dt) = 0.5;
+vsasl_inp = vsasl_inp .* decay;
+
+vsasl_inp = conv(vsasl_inp, p_art_kernel);
+vsasl_inp = vsasl_inp(1:length(input));
+
+vsasl_sig = f * conv(vsasl_inp, exp(-ttmp*(f/0.9 + 1/T1gm) ));
+vsasl_sig = vsasl_sig(1:length(input));
+
+% scheme 2  : inversion based velocity selective ASL
+vsai_inp = input;
+vsai_inp(1:1.5/dt) = 0.9;
+vsai_inp = vsai_inp .* decay;
+
+vsai_inp = conv(vsai_inp, p_art_kernel);
+vsai_inp = vsai_inp(1:length(input));
+
+vsai_sig = f * conv(vsai_inp, exp(-ttmp*(f/0.9 + 1/T1gm) ));
+vsai_sig = vsai_sig(1:length(input));
+
+
+% scheme 3: continuous ASL
+pcasl_inp = input;
+pcasl_inp(1:2/dt) = 0.9;
+
+pcasl_inp = conv(pcasl_inp , art_kernel .* decay);
+pcasl_inp = pcasl_inp(1:length(input));
+
+pcasl_sig = f * conv(pcasl_inp, exp(-ttmp*(f/0.9 + 1/T1gm) ));
+pcasl_sig = pcasl_sig(1:length(input));
+
+
+% scheme 4: PASL
+pasl_inp = input;
+pasl_inp(1/dt:1.5/dt) = 0.99;
+pasl_inp = pasl_inp .* decay;
+
+pasl_inp = conv(pasl_inp, p_art_kernel);
+pasl_inp = pasl_inp(1:length(input));
+
+pasl_sig = f * conv(pasl_inp, exp(-ttmp*(f/0.9 + 1/T1gm) ));
+pasl_sig = pasl_sig(1:length(input));
+
+
+
+%%
+subplot(211)
+hold off
+%plot(ttmp, vsasl_inp,'r'); hold on
+plot(ttmp, vsai_inp_3t,'r'); hold on
+plot(ttmp, pcasl_inp_3t,'k'); hold on
+
+plot(ttmp, vsai_inp,'r--'); hold on
+plot(ttmp, pcasl_inp,'k--'); hold on
+%plot(ttmp, pasl_inp,'k'); hold on
+legend( 'FT-VSI ASL (3T)', 'PCASL (3T)', 'FT-VSI ASL (0.55T)', 'PCASL (0.55T)');
+title('Arterial Input Function')
+xlabel('time (sec.)');
+
+%fatlines(1)
+%dofontsize(16)
+
+subplot(212)
+hold off
+%plot(ttmp, vsasl_sig,'r'); hold on
+plot(ttmp, vsai_sig_3t,'r'); hold on
+plot(ttmp, pcasl_sig_3t,'k'); hold on
+
+plot(ttmp, vsai_sig,'r--'); hold on
+plot(ttmp, pcasl_sig,'k--'); hold on
+%plot(ttmp, pasl_sig,'k'); hold on
+legend( 'FT-VSI ASL (3T)', 'PCASL (3T)', 'FT-VSI ASL (0.55T)', 'PCASL (0.55T)');
+%legend('sat. VSASL', 'Inv VSASL', 'PCASL', 'PASL');
+title('Amt. of Label in the Tissue')
+xlabel('time (sec.)');
+%fatlines(1)
+%dofontsize(16)
+
+
+print -dpng ~/compare_input_functions_B0
+
+

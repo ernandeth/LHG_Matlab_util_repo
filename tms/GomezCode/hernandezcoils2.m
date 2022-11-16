@@ -1,0 +1,82 @@
+clear all;
+
+%%%% required information
+sourcefolder='/home/luisgo/Finitedifferenceintegralwall/';
+conductivitymap='sigma.mat';
+boxndim=[10;10;10];
+boxddim=[.00375;.00375;.005];
+p=6; %%how much padding p>4 and even is needed
+flag=0; %%set to 0 to debug 1 to run simulation
+
+% %%%%%%%%%%%Loading brain (independent of code)
+load(conductivitymap)
+sigmap=sigma;
+brainlx=size(sigmap);
+sigmap(1:p+brainlx(1),1:p+brainlx(2),1:p+brainlx(3))=0;
+sigmap(p/2+1:p/2+brainlx(1),p/2+1:p/2+brainlx(2),p/2+1:p/2+brainlx(3))=sigma;
+clear sigma;
+ boxndim=size(sigmap);
+ global nx ny nz dx dy dz;
+ nx=boxndim(1);
+ ny=boxndim(2);
+ nz=boxndim(3);
+ dx=boxddim(1);
+ dy=boxddim(2);
+ dz=boxddim(3);
+% %%%%%%%%% end loading brain
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Coil specs
+%%%%%%%%%%%                       Begin Coil specifications
+%%%% 1.)The origin of the coordinate system is with respect to the center of the brain
+%%%% 2.) an array of coils is defined by 2 two-dimensional cell arrays
+%%%% Jvec, rs with indexing as follows:
+%%%% rs{coil_index}=(element_id,direction)
+%%%% Jvec{coil_index}(element_id,direction)
+%%%% coil_index- addresses to a specific coil
+%%%% element_id- addresses to a point used to interpolate the coil
+%%%% direction= is 1,2,or 3 indicating x,y,or z
+
+% the eta component of the location of the ith interpolant of the jth coil would be
+%(rs{j}(i,eta)+rs{j+1}(i,eta))/2
+
+% the eta component current flowing out of the ith interpolant of the jth coil would be
+%Jvec{j}(i,eta)
+
+%%% note we do not assume closed currents so in general Jvec has one less
+%%% component than rs Thus is it is the responsibility of the user to close
+%%% all loops
+
+%%%% element_id- an index for one o
+r = 0.06;  % this radius is a fraction of the FOV
+
+aperture = pi/6;
+zpos = dz*32+0.01;
+R = 0.10;
+sfactor = -0.33;
+shield_offset = .0625;
+theta=pi/8;
+
+current =1e3/1e-4; % this is actually dI/dt in Amps/sec.
+
+%%%%%%%%%%%%%%%%%fCreate coils of choise
+[rs{1},Jvec{1}] = make_fig8(current, r, zpos, -theta);
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%% Do not modify This will run the code
+hold on;
+for i=1:length(rs)
+    rs{i}(:,1)=rs{i}(:,1)+nx*dx/2;
+    rs{i}(:,2)=rs{i}(:,2)+ny*dy/2;
+    rs{i}(:,3)=rs{i}(:,3)+nz*dz/2;
+end
+if flag==1
+Efield=oneshotcerry(boxndim,boxddim,sigmap,rs,Jvec);
+[Ex1 Ey1 Ez1]=organizefield(Efield);
+save(strcat(pecfolder,'Efield1.mat'),'Ex1','Ey1','Ez1')
+else
+seesetup(rs,Jvec,sigmap,ones(size(sigmap)));
+end
+

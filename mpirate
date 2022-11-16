@@ -1,0 +1,13 @@
+#!/bin/tcsh -f
+foreach file (*.m) 
+mv $file tmp
+sed -e "s/.*Copyright.*// " tmp > $file
+echo $file
+end
+foreach file (*.m) 
+mv $file tmp
+sed -e "s/.*Revision.*// " tmp > $file
+echo $file
+end
+
+

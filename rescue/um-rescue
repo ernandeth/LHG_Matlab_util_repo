@@ -1,0 +1,99 @@
+#!/bin/tcsh -f
+
+if ($# == 0) then
+   echo "um-rescue.  written by Luis Hernandez-Garcia at UM"
+
+   echo "USAGE : um-rescue subject study start_run end_run"
+   echo "This script re-runs the interpolation"
+   echo "and realignment to repair problems in the pre-processing" 
+   echo ""
+   exit
+endif
+
+
+
+set subj=$1
+set study=$2
+set start_run=$3
+set end_run=$4
+
+set rootdir=`pwd`
+set TR=2.0
+
+set run=$start_run
+set count=1
+
+cd ./$subj/$subj/func/$study/
+
+set count=$start_run
+
+while($count <= $end_run)
+	cd "run_$count/img"
+	echo "Processing ./$subj/$subj/func/$study/run_$run"
+
+	echo "Slice timing correction  ...."
+
+	set num=`ls -1 vol*.img | wc | awk '{print $1}'`
+	echo "the number of scans is $num"
+
+	# first clean up the bad directories:
+	echo "deleting old  avol... and ravol ..."
+	rm ../a_img/avol*img
+	rm ../a_img/avol*hdr
+	rm ../ra_img/ravol*img
+	rm ../ra_img/ravol*hdr
+
+	ls -1 vol*.img > files.txt
+	interpsinc -t $TR -n $num -a 2 -f files.txt
+
+
+	# ensure that the standard file is one that has reached 
+	# T1 equilibrium
+	set std_file=`ls avol*0005.img`
+
+	if ( -f ../../run_1/ra_img/r$std_file) then
+		echo "this is not the first run"
+		set std_file=`ls ../../run_1/a_img/avol*0005.img`
+		echo $std_file
+	endif
+
+	foreach file (avol*.img)
+   		echo "\naligning: $file ... to standard file: $std_file"  
+   		echo `pwd`
+
+   		#AIR3 version:
+   		alignlinear $std_file $file r$file:r.air -m 6 -c 0.0001 -x 3 -b1 2 2 2 -b2 2 2 2 -t1 100 -t2 100 -s 27 1 3  >> realign.output
+   		#extract the realignment params from the realignment output...
+   		grep PARAMS realign.output | cut -d ' ' -f3-9 > realign.dat
+   
+   		scanair  r$file:r.air -r >> realign.log
+   		reslice r$file:r.air r$file:r.img -k -o -n 5 2 2 2
+
+	end
+
+
+	foreach imgfile (avol*)
+	 	mv $imgfile ../a_img
+		mv r$imgfile ../ra_img
+	end
+	echo "run: $count moved interpolated and realigned imgs to their directories"
+
+	mv ./realign.log ../ra_img
+	mv ./realign.output ../ra_img
+	cp ./realign.dat ../ra_img
+
+	cd ../..
+
+	@ run ++
+	@ count ++
+end
+cd $rootdir
+
+chmod -R 777 ./*
+
+echo ""
+echo "um-rescue script completed for $subject : $sutdy"
+echo ""
+
+exit
+

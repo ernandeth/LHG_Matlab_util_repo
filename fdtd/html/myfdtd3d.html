@@ -1,0 +1,564 @@
+<html xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   
+      <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      -->
+      <title>myfdtd3d</title>
+      <meta name="generator" content="MATLAB 7.0.1">
+      <meta name="date" content="2005-04-06">
+      <meta name="m-file" content="myfdtd3d"><style>
+body {
+  background-color: white;
+  margin:10px;
+}
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+pre.codeinput {
+  margin-left: 30px;
+}
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.showbuttons {
+  margin-left: 30px;
+  border: solid black 2px;
+  padding: 4px;
+  background: #EBEFF3;
+}
+
+pre.codeoutput {
+  color: gray;
+  font-style: italic;
+}
+pre.error {
+  color: red;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows.  On Gecko-based browsers, the shrink-to-fit doesn't work. */ 
+p,h1,h2,div {
+  /* for MATLAB's browser */
+  width: 600px;
+  /* for Mozilla, but the "width" tag overrides it anyway */
+  max-width: 600px;
+  /* for IE */
+  width:expression(document.body.clientWidth > 620 ? "600px": "auto" );
+}
+
+    </style></head>
+   <body><pre class="codeinput"><span class="comment">%***********************************************************************</span>
+<span class="comment">%     3-D FDTD code with PEC boundaries</span>
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     modified by Luis Hernandez to include variable maps of conductivity</span>
+<span class="comment">%     and permeability</span>
+<span class="comment">%     date march 2005</span>
+<span class="comment">%</span>
+<span class="comment">%     Program author: Susan C. Hagness</span>
+<span class="comment">%                     Department of Electrical and Computer Engineering</span>
+<span class="comment">%                     University of Wisconsin-Madison</span>
+<span class="comment">%                     1415 Engineering Drive</span>
+<span class="comment">%                     Madison, WI 53706-1691</span>
+<span class="comment">%                     608-265-5739</span>
+<span class="comment">%                     hagness@engr.wisc.edu</span>
+<span class="comment">%</span>
+<span class="comment">%     Date of this version:  February 2000</span>
+<span class="comment">%</span>
+<span class="comment">%     This MATLAB M-file implements the finite-difference time-domain</span>
+<span class="comment">%     solution of Maxwell's curl equations over a three-Nensional</span>
+<span class="comment">%     Cartesian space lattice comprised of uniform cubic grid cells.</span>
+<span class="comment">%</span>
+<span class="comment">%     To illustrate the algorithm, an air-filled rectangular cavity</span>
+<span class="comment">%     resonator is modeled.  The length, width, and height of the</span>
+<span class="comment">%     cavity are 10.0 cm (x-direction), 4.8 cm (y-direction), and</span>
+<span class="comment">%     2.0 cm (z-direction), respectively.</span>
+<span class="comment">%</span>
+<span class="comment">%     The computational domain is truncated using PEC boundary</span>
+<span class="comment">%     conditions:</span>
+<span class="comment">%          ex(i,j,k)=0 on the j=1, j=jb, k=1, and k=kb planes</span>
+<span class="comment">%          ey(i,j,k)=0 on the i=1, i=ib, k=1, and k=kb planes</span>
+<span class="comment">%          ez(i,j,k)=0 on the i=1, i=ib, j=1, and j=jb planes</span>
+<span class="comment">%     These PEC boundaries form the outer lossless walls of the cavity.</span>
+<span class="comment">%</span>
+<span class="comment">%     The cavity is excited by an additive current source oriented</span>
+<span class="comment">%     along the z-direction.  The source waveform is a differentiated</span>
+<span class="comment">%     Gaussian pulse given by</span>
+<span class="comment">%          J(t)=-J0*(t-t0)*exp(-(t-t0)^2/tau^2),</span>
+<span class="comment">%     where tau=50 ps.  The FWHM spectral bandwidth of this zero-dc-</span>
+<span class="comment">%     content pulse is approximately 7 GHz. The grid resolution</span>
+<span class="comment">%     (dx = 2 mm) was chosen to provide at least 10 samples per</span>
+<span class="comment">%     wavelength up through 15 GHz.</span>
+<span class="comment">%</span>
+<span class="comment">%     To execute this M-file, type "fdtd3D" at the MATLAB prompt.</span>
+<span class="comment">%     This M-file displays the FDTD-computed Ez fields at every other</span>
+<span class="comment">%     time step, and records those frames in a movie matrix, M, which</span>
+<span class="comment">%     is played at the end of the simulation using the "movie" command.</span>
+<span class="comment">%</span>
+<span class="comment">%***********************************************************************</span>
+
+ clear
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Fundamental constants</span>
+<span class="comment">%***********************************************************************</span>
+
+cc=2.99792458e8;            <span class="comment">%speed of light in free space</span>
+muz=4.0*pi*1.0e-7;          <span class="comment">%permeability of free space</span>
+epsz=1.0/(cc*cc*muz);       <span class="comment">%permittivity of free space</span>
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Grid parameters</span>
+<span class="comment">%***********************************************************************</span>
+
+N=30;       <span class="comment">%number of grid cells in x-direction</span>
+M=N-1;
+
+
+is=N/2;       <span class="comment">%x location of z-directed current source</span>
+js=N/2;       <span class="comment">%y location of z-directed current source</span>
+
+kobs=12;      <span class="comment">% observation plane</span>
+
+dx=0.002;          <span class="comment">%space increment of cubic lattice</span>
+dt=dx/(2.0*cc);    <span class="comment">%time step</span>
+
+nmax=200;          <span class="comment">%total number of time steps</span>
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Differentiated Gaussian pulse excitation</span>
+<span class="comment">%***********************************************************************</span>
+
+rtau=150.0e-12;
+tau=rtau/dt;
+ndelay=3*tau;
+<span class="comment">%ndelay=0;%3*tau;</span>
+srcconst=-dt*3.0e+11;
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Material parameters</span>
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%</span>
+<span class="comment">%eps=1.0;</span>
+<span class="comment">%sig=0.0;</span>
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Material parameter maps</span>
+<span class="comment">%***********************************************************************</span>
+epsz=ones(N,N,N)*epsz;
+sig=zeros(N,N,N);
+<span class="comment">%sig(10:15,10:15,10:15)=1e-10;</span>
+mu = muz * ones(N,N,N);
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Updating coefficients</span>
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%</span>
+<span class="comment">% ca=(1.0-(dt*sig)/(2.0*epsz*eps))/(1.0+(dt*sig)/(2.0*epsz*eps));</span>
+<span class="comment">% cb=(dt/epsz/eps/dx)/(1.0+(dt*sig)/(2.0*epsz*eps));</span>
+<span class="comment">% da=1.0;</span>
+<span class="comment">% db=dt/muz/dx;</span>
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Updating coefficients</span>
+<span class="comment">%***********************************************************************</span>
+
+Ca = 1.0-(dt.*sig)./(2.0*epsz);
+Cb = dt/(epsz*2*dx);
+
+Da = 1.0 - dt .* sig./(mu);
+Db = dt./(mu*2*dx);
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Field arrays</span>
+<span class="comment">%***********************************************************************</span>
+
+ex=zeros(N,N,N);
+ey=zeros(N,N,N);
+ez=zeros(N,N,N);
+hx=zeros(N,N,N);
+hy=zeros(N,N,N);
+hz=zeros(N,N,N);
+
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     BEGIN TIME-STEPPING LOOP</span>
+<span class="comment">%***********************************************************************</span>
+src= srcconst.*([1:500]-ndelay).*exp(-(([1:500]-ndelay).^2./tau^2));
+subplot(223), plot(src);
+
+
+
+<span class="keyword">for</span> n=1:nmax
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Update electric fields</span>
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">% %          Let's try a Cartesian Grid</span>
+<span class="comment">%            I only update elements from 2:N-1  - note M=N-1 to abbreviate</span>
+<span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span>
+
+<span class="comment">% Ex = Ca*Ex + Cb( dHy/dz - dHz/dy);</span>
+ex(1:N, 2:M, 2:M)= Ca(1:N, 2:M, 2:M) .* ex(1:N, 2:M, 2:M) - <span class="keyword">...</span>
+                   Cb (1:N, 2:M, 2:M).* <span class="keyword">...</span>
+                   (hz(1:N, 1:M-1, 2:M) - hz(1:N, 3:M+1, 2:M) - <span class="keyword">...</span>
+                    hy(1:N, 2:M, 1:M-1) + hy(1:N, 2:M, 3:M+1));  <span class="comment">%- Jx(2:M, 2:M, 2:M) ...</span>
+
+<span class="comment">% Ey = Ca*Ey + Cb( dHx/dz - dHz/dx);</span>
+ey(2:M, 1:N, 2:M) = Ca(2:M, 1:N, 2:M) .* ey(2:M, 1:N, 2:M) + <span class="keyword">...</span>
+                    Cb(2:M, 1:N, 2:M) .*<span class="keyword">...</span>
+                    (hx(2:M, 1:N, 1:M-1) - hx(2:M, 1:N, 3:M+1) - <span class="keyword">...</span>
+                     hz(1:M-1, 1:N, 2:M) + hz(3:M+1, 1:N, 2:M)) ;  <span class="comment">%- Jy(2:N,1:N,2:N) ...</span>
+
+<span class="comment">% Ez = Ca*Ey + Cb( dHy/dx - dHx/dy);</span>
+ez(2:M, 2:M, 1:N) = Ca(2:M, 2:M, 1:N) .* ez(2:M, 2:M, 1:N) + <span class="keyword">...</span>
+                    Cb(2:M, 2:M, 1:N) .* <span class="keyword">...</span>
+                    (hy(1:M-1, 2:M, 1:N) - hy(3:M+1, 2:M, 1:N) - <span class="keyword">...</span>
+                     hx(2:M, 1:M-1, 1:N) + hx(2:M, 3:M+1, 1:N)) ; <span class="comment">%- Jz(2:N,1:N,2:N) ...</span>
+
+<span class="comment">% this will go away when I uncomment the J terms:</span>
+ez(is+10, js, :) = ez(is+10, js,:)+<span class="keyword">...</span>
+                srcconst.*(n-ndelay)*exp(-((n-ndelay)^2/tau^2));
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Update magnetic fields</span>
+<span class="comment">%***********************************************************************</span>
+
+<span class="comment">% Hx = Da*Hx + Db*(dEy/dz + dEz/dy - Mx*dt )</span>
+hx(1:N, 2:M, 2:M) =  Da(1:N, 2:M, 2:M) .* hx(1:N, 2:M, 2:M) + <span class="keyword">...</span>
+                     Db(1:N, 2:M, 2:M) .* <span class="keyword">...</span>
+                     (ey(1:N, 2:M, 1:M-1) - ey(1:N, 2:M, 3:M+1) - <span class="keyword">...</span>
+                      ez(1:N, 1:M-1, 2:M) + ez(1:N, 3:M+1, 2:M));
+                                        <span class="comment">% - Mx*dt/mu);</span>
+
+<span class="comment">% Hy = Da*Hy + Db*(dEz/dx - dEx/dz - My*dt)</span>
+hy(2:M, 1:N, 2:M) = Da(2:M, 1:N, 2:M) .* hy(2:M, 1:N, 2:M) + <span class="keyword">...</span>
+                    Db(2:M, 1:N, 2:M) .* <span class="keyword">...</span>
+                    (ez(2:M, 1:N, 1:M-1) - ez(2:M, 1:N, 3:M+1) - <span class="keyword">...</span>
+                     ex(1:M-1, 1:N, 2:M) + ex(3:M+1, 1:N, 2:M)) ;
+                                        <span class="comment">% - My*dt);</span>
+
+<span class="comment">% Hz = Da*Hz + Db*(dEx/dy - dEy/dx - Mz*dt)</span>
+hz(2:M, 2:M, 1:N) = Da(2:M, 2:M, 1:N) .*hz(2:M, 2:M, 1:N) + <span class="keyword">...</span>
+                    Db(2:M, 2:M, 1:N) .* <span class="keyword">...</span>
+                    (ex(2:M, 1:M-1, 1:N) - ex(2:M, 3:M+1, 1:N) - <span class="keyword">...</span>
+                     ey(1:M-1, 2:M, 1:N) + ey(3:M+1, 2:M, 1:N) ) ;
+                     <span class="comment">% - Mz*dt);</span>
+
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     Visualize fields</span>
+<span class="comment">%***********************************************************************</span>
+
+<span class="keyword">if</span> mod(n,2)==0;
+
+    timestep=int2str(n);
+    tview(:,:)=ez(:,:,N/2);
+    sview(:,:)=ez(:,N/2,:);
+    subplot(221),<span class="comment">%;</span>
+  <span class="comment">%   plot(squeeze(ex(:, N/2+1,N/2)))</span>
+    imagesc(tview')
+<span class="comment">%     shading flat;</span>
+    caxis([-1.0 1.0]);
+    colorbar;
+    axis <span class="string">image</span>;
+    title([<span class="string">'Ez( z=N/2), time step = '</span>,timestep]);
+
+    subplot(222),
+<span class="comment">%     plot(squeeze(ex(N/2,:,N/2)))</span>
+<span class="comment">%     title(['time step = ', timestep])</span>
+    imagesc(sview');
+<span class="comment">%     shading flat;</span>
+    caxis([-1.0 1.0]);
+    colorbar;
+    axis <span class="string">image</span>;
+    title([<span class="string">'Ez(y=N/2), time step = '</span>,timestep]);
+
+    drawnow
+
+    subplot(224),
+    plot(squeeze(ez(:,N/2,  N/2)))
+    xlabel(<span class="string">'x position'</span>)
+    <span class="comment">%axis([0 N -100 100])</span>
+    nn=n/2;
+    <span class="comment">%M(:,nn)=getframe(gcf,rect);</span>
+
+<span class="keyword">end</span>;
+
+<span class="comment">%***********************************************************************</span>
+<span class="comment">%     END TIME-STEPPING LOOP</span>
+<span class="comment">%***********************************************************************</span>
+
+<span class="keyword">end</span>
+
+<span class="comment">%movie(gcf,M,0,10,rect);</span>
+</pre><img vspace="5" hspace="5" src="myfdtd3d_01.png"> <p class="footer"><br>
+         Published with MATLAB&reg; 7.0.1<br></p>
+      <!--
+##### SOURCE BEGIN #####
+%***********************************************************************
+%     3-D FDTD code with PEC boundaries
+%***********************************************************************
+%     modified by Luis Hernandez to include variable maps of conductivity
+%     and permeability
+%     date march 2005
+%
+%     Program author: Susan C. Hagness
+%                     Department of Electrical and Computer Engineering
+%                     University of Wisconsin-Madison
+%                     1415 Engineering Drive
+%                     Madison, WI 53706-1691
+%                     608-265-5739
+%                     hagness@engr.wisc.edu
+%
+%     Date of this version:  February 2000
+%
+%     This MATLAB M-file implements the finite-difference time-domain
+%     solution of Maxwell's curl equations over a three-Nensional
+%     Cartesian space lattice comprised of uniform cubic grid cells.
+%     
+%     To illustrate the algorithm, an air-filled rectangular cavity 
+%     resonator is modeled.  The length, width, and height of the 
+%     cavity are 10.0 cm (x-direction), 4.8 cm (y-direction), and 
+%     2.0 cm (z-direction), respectively.
+%
+%     The computational domain is truncated using PEC boundary 
+%     conditions:
+%          ex(i,j,k)=0 on the j=1, j=jb, k=1, and k=kb planes
+%          ey(i,j,k)=0 on the i=1, i=ib, k=1, and k=kb planes
+%          ez(i,j,k)=0 on the i=1, i=ib, j=1, and j=jb planes
+%     These PEC boundaries form the outer lossless walls of the cavity.
+%
+%     The cavity is excited by an additive current source oriented
+%     along the z-direction.  The source waveform is a differentiated 
+%     Gaussian pulse given by 
+%          J(t)=-J0*(t-t0)*exp(-(t-t0)^2/tau^2), 
+%     where tau=50 ps.  The FWHM spectral bandwidth of this zero-dc-
+%     content pulse is approximately 7 GHz. The grid resolution 
+%     (dx = 2 mm) was chosen to provide at least 10 samples per 
+%     wavelength up through 15 GHz.
+%
+%     To execute this M-file, type "fdtd3D" at the MATLAB prompt.
+%     This M-file displays the FDTD-computed Ez fields at every other
+%     time step, and records those frames in a movie matrix, M, which 
+%     is played at the end of the simulation using the "movie" command.
+%
+%***********************************************************************
+
+ clear
+
+%***********************************************************************
+%     Fundamental constants
+%***********************************************************************
+
+cc=2.99792458e8;            %speed of light in free space
+muz=4.0*pi*1.0e-7;          %permeability of free space
+epsz=1.0/(cc*cc*muz);       %permittivity of free space
+
+%***********************************************************************
+%     Grid parameters
+%***********************************************************************
+
+N=30;       %number of grid cells in x-direction
+M=N-1;
+   
+
+is=N/2;       %x location of z-directed current source
+js=N/2;       %y location of z-directed current source
+
+kobs=12;      % observation plane
+
+dx=0.002;          %space increment of cubic lattice
+dt=dx/(2.0*cc);    %time step
+
+nmax=200;          %total number of time steps
+
+%***********************************************************************
+%     Differentiated Gaussian pulse excitation
+%***********************************************************************
+
+rtau=150.0e-12;
+tau=rtau/dt;
+ndelay=3*tau;
+%ndelay=0;%3*tau;
+srcconst=-dt*3.0e+11;
+
+%***********************************************************************
+%     Material parameters
+%***********************************************************************
+%
+%eps=1.0;
+%sig=0.0;        
+%***********************************************************************
+%     Material parameter maps
+%***********************************************************************
+epsz=ones(N,N,N)*epsz;
+sig=zeros(N,N,N);
+%sig(10:15,10:15,10:15)=1e-10;
+mu = muz * ones(N,N,N);
+
+%***********************************************************************
+%     Updating coefficients
+%***********************************************************************
+% 
+% ca=(1.0-(dt*sig)/(2.0*epsz*eps))/(1.0+(dt*sig)/(2.0*epsz*eps));
+% cb=(dt/epsz/eps/dx)/(1.0+(dt*sig)/(2.0*epsz*eps));
+% da=1.0;
+% db=dt/muz/dx;
+%***********************************************************************
+%     Updating coefficients
+%***********************************************************************
+
+Ca = 1.0-(dt.*sig)./(2.0*epsz);
+Cb = dt/(epsz*2*dx);
+
+Da = 1.0 - dt .* sig./(mu);
+Db = dt./(mu*2*dx);
+
+%***********************************************************************
+%     Field arrays
+%***********************************************************************
+
+ex=zeros(N,N,N);
+ey=zeros(N,N,N);
+ez=zeros(N,N,N);
+hx=zeros(N,N,N);
+hy=zeros(N,N,N);
+hz=zeros(N,N,N);
+
+
+%***********************************************************************
+%     BEGIN TIME-STEPPING LOOP
+%***********************************************************************
+src= srcconst.*([1:500]-ndelay).*exp(-(([1:500]-ndelay).^2./tau^2));
+subplot(223), plot(src);
+
+
+
+for n=1:nmax
+      
+%***********************************************************************
+%     Update electric fields
+%***********************************************************************
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %          Let's try a Cartesian Grid
+%            I only update elements from 2:N-1  - note M=N-1 to abbreviate
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                                        
+% Ex = Ca*Ex + Cb( dHy/dz - dHz/dy); 
+ex(1:N, 2:M, 2:M)= Ca(1:N, 2:M, 2:M) .* ex(1:N, 2:M, 2:M) - ...
+                   Cb (1:N, 2:M, 2:M).* ...
+                   (hz(1:N, 1:M-1, 2:M) - hz(1:N, 3:M+1, 2:M) - ...
+                    hy(1:N, 2:M, 1:M-1) + hy(1:N, 2:M, 3:M+1));  %- Jx(2:M, 2:M, 2:M) ...
+                               
+% Ey = Ca*Ey + Cb( dHx/dz - dHz/dx); 
+ey(2:M, 1:N, 2:M) = Ca(2:M, 1:N, 2:M) .* ey(2:M, 1:N, 2:M) + ...
+                    Cb(2:M, 1:N, 2:M) .*...
+                    (hx(2:M, 1:N, 1:M-1) - hx(2:M, 1:N, 3:M+1) - ...
+                     hz(1:M-1, 1:N, 2:M) + hz(3:M+1, 1:N, 2:M)) ;  %- Jy(2:N,1:N,2:N) ...
+                     
+% Ez = Ca*Ey + Cb( dHy/dx - dHx/dy); 
+ez(2:M, 2:M, 1:N) = Ca(2:M, 2:M, 1:N) .* ez(2:M, 2:M, 1:N) + ...
+                    Cb(2:M, 2:M, 1:N) .* ...
+                    (hy(1:M-1, 2:M, 1:N) - hy(3:M+1, 2:M, 1:N) - ...
+                     hx(2:M, 1:M-1, 1:N) + hx(2:M, 3:M+1, 1:N)) ; %- Jz(2:N,1:N,2:N) ...
+                 
+% this will go away when I uncomment the J terms:
+ez(is+10, js, :) = ez(is+10, js,:)+...
+                srcconst.*(n-ndelay)*exp(-((n-ndelay)^2/tau^2));
+
+%***********************************************************************
+%     Update magnetic fields
+%***********************************************************************
+
+% Hx = Da*Hx + Db*(dEy/dz + dEz/dy - Mx*dt ) 
+hx(1:N, 2:M, 2:M) =  Da(1:N, 2:M, 2:M) .* hx(1:N, 2:M, 2:M) + ...
+                     Db(1:N, 2:M, 2:M) .* ...
+                     (ey(1:N, 2:M, 1:M-1) - ey(1:N, 2:M, 3:M+1) - ...
+                      ez(1:N, 1:M-1, 2:M) + ez(1:N, 3:M+1, 2:M)); 
+                                        % - Mx*dt/mu);
+                    
+% Hy = Da*Hy + Db*(dEz/dx - dEx/dz - My*dt) 
+hy(2:M, 1:N, 2:M) = Da(2:M, 1:N, 2:M) .* hy(2:M, 1:N, 2:M) + ...
+                    Db(2:M, 1:N, 2:M) .* ...
+                    (ez(2:M, 1:N, 1:M-1) - ez(2:M, 1:N, 3:M+1) - ...
+                     ex(1:M-1, 1:N, 2:M) + ex(3:M+1, 1:N, 2:M)) ;
+                                        % - My*dt);
+                    
+% Hz = Da*Hz + Db*(dEx/dy - dEy/dx - Mz*dt) 
+hz(2:M, 2:M, 1:N) = Da(2:M, 2:M, 1:N) .*hz(2:M, 2:M, 1:N) + ...
+                    Db(2:M, 2:M, 1:N) .* ...
+                    (ex(2:M, 1:M-1, 1:N) - ex(2:M, 3:M+1, 1:N) - ...
+                     ey(1:M-1, 2:M, 1:N) + ey(3:M+1, 2:M, 1:N) ) ;
+                     % - Mz*dt);
+                    
+
+%***********************************************************************
+%     Visualize fields
+%***********************************************************************
+
+if mod(n,2)==0;
+
+    timestep=int2str(n);
+    tview(:,:)=ez(:,:,N/2);
+    sview(:,:)=ez(:,N/2,:);
+    subplot(221),%;
+  %   plot(squeeze(ex(:, N/2+1,N/2)))
+    imagesc(tview')
+%     shading flat;
+    caxis([-1.0 1.0]);
+    colorbar;
+    axis image;
+    title(['Ez( z=N/2), time step = ',timestep]);
+    
+    subplot(222),
+%     plot(squeeze(ex(N/2,:,N/2)))
+%     title(['time step = ', timestep])
+    imagesc(sview');
+%     shading flat;
+    caxis([-1.0 1.0]);
+    colorbar;
+    axis image;
+    title(['Ez(y=N/2), time step = ',timestep]);
+    
+    drawnow
+
+    subplot(224), 
+    plot(squeeze(ez(:,N/2,  N/2)))
+    xlabel('x position')
+    %axis([0 N -100 100])
+    nn=n/2;
+    %M(:,nn)=getframe(gcf,rect);
+
+end;
+
+%***********************************************************************
+%     END TIME-STEPPING LOOP
+%***********************************************************************
+
+end
+
+%movie(gcf,M,0,10,rect);
+
+##### SOURCE END #####
+-->
+   </body>
+</html>

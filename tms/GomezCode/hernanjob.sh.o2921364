@@ -1,0 +1,30 @@
+I ran on:
+nyx0397
+Warning: Unable to open display 'localhost:36.0'.  You will not be able to display graphics on the screen.
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2009 The MathWorks, Inc.
+                Version 7.8.0.347 (R2009a) 64-bit (glnxa64)
+                             February 12, 2009
+
+Warning: X does not support locale en_US.UTF-8
+ 
+  To get started, type one of these: helpwin, helpdesk, or demo.
+  For product information, visit www.mathworks.com.
+ 
+>> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> >> Elapsed time is 3747.952586 seconds.
+lsqr stopped at iteration 2000 without converging to the desired tolerance 1e-07
+because the maximum number of iterations was reached.
+The iterate returned (number 2000) has relative residual 0.00014
+Elapsed time is 396.393454 seconds.
+>> >> >> >> >> Elapsed time is 4019.398193 seconds.
+lsqr stopped at iteration 2000 without converging to the desired tolerance 1e-07
+because the maximum number of iterations was reached.
+The iterate returned (number 2000) has relative residual 0.0005
+Elapsed time is 385.082051 seconds.
+>> >> >> >> >> Elapsed time is 4011.758639 seconds.
+lsqr stopped at iteration 2000 without converging to the desired tolerance 1e-07
+because the maximum number of iterations was reached.
+The iterate returned (number 2000) has relative residual 0.0006
+Elapsed time is 373.897455 seconds.
+>> 

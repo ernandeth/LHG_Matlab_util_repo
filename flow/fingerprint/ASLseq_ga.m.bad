@@ -1,0 +1,166 @@
+% 
+% ObjectiveFunction = @dictionary_correlation_150507
+% label_dur = x(1:20);
+% PID = x(21:40);
+% TR = x(41:60) ;
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear all
+% x0 = x;  % initial guess is the last 
+
+ObjectiveFunction = @dictionary_correlation_150507;
+
+nvars = 50;    % Number of acquisitions - 2 variables at each iteration
+maxTR = 0.7;
+
+% constrain the label durations:
+lbounds(1:nvars) = 0.05;
+ubounds(1:nvars) = 0.5;  
+
+% constrain the tagging control
+lbounds(nvars+1 : 2*nvars) = 0;
+ubounds(nvars+1 : 2*nvars) = 1;
+IntegersOnly = [nvars+1 : 2*nvars];
+
+% constrain the PID s
+%lbounds(nvars+1 : 2*nvars) = 0.05;
+%ubounds(nvars+1 : 2*nvars) = 0.5;
+
+% constrain the t_adjusts
+%lbounds(2*nvars+1 : 3*nvars) = 0.01;
+%ubounds(2*nvars+1 : 3*nvars) = 2;
+
+
+opts = gaoptimset;
+
+opts.Generations = 30*nvars;
+opts.PopulationSize = 30*nvars;
+opts.PlotFcns = @gaplotbestf;
+opts.Display = 'iter';
+%
+initguess =  2*rand([opts.PopulationSize  nvars*2]);
+options.EliteCount = 2;
+%opts.InitialPopulation =initguess;
+
+%matlabpool open 4
+
+% Call the optimizer:
+
+[x,fval] = ga(ObjectiveFunction, nvars*2, [],[], [], [], lbounds, ubounds,[],IntegersOnly,opts);
+%[x,fval] = ga(ObjectiveFunction, nvars*2, [],[], [], [], lbounds, ubounds,[],[],opts);
+
+%matlabpool close
+
+% reshuffle the timing parms into a structure AND into text files for the
+% scanner to read
+
+%tvec = [x x];
+%tvec(:) =0;
+%tvec(1:2:end) = x;
+%tvec(2:2:end) = x;
+
+% no longer doing things in pairs
+tvec = x;
+
+N = length(tvec)/2;
+timing_parms.label_dur =  tvec(1 : N);
+timing_parms.PID = 0.05 * ones(N , 1);
+% timing_parms.PID = tvec(N+1 : 2*N) ;
+% timing_parms.t_adjust =   tvec(2*N+1 : 3*N );
+timing_parms.t_adjust =0.05 * ones(N , 1) ;
+timing_parms.isLabel = tvec(N+1 : 2*N) ;
+timing_parms.order = 1;
+timing_parms.Nlabel_group = 1;
+ 
+figure
+
+%%
+
+% There are the corrected timing parameters for the GE scanner
+% The scanner willl add some delays (bug in epic code)
+% so we account for them in here:
+t_tags = timing_parms.label_dur' ;
+t_delays = timing_parms.PID' ;
+t_adjusts =timing_parms.t_adjust' ;
+isLabel = timing_parms.isLabel';
+
+
+t_tags = repmat(t_tags,4,1);
+t_delays = repmat(t_delays,4,1);
+t_adjusts = repmat(t_adjusts,4,1);
+isLabel = repmat(isLabel, 4,1);
+
+save t_tags.txt t_tags -ascii
+save t_adjusts.txt t_adjusts -ascii
+save t_delays.txt t_delays -ascii
+save labelcontrol.txt isLabel -ascii
+
+timing_parms.label_dur = t_tags;
+timing_parms.PID = t_delays;
+timing_parms.t_adjust = t_adjusts;
+
+% Now show me what this dictionary does
+[dict, parms] = gen_dictionary_150507(timing_parms);
+
+plot(dict')
+drawnow
+
+xc = (corrcoef(dict'));
+xc = abs(xc(:));
+G = mean(xc)
+G = norm(xc);
+
+save optimalTiming_parms dict parms G x
+
+figure
+subplot(211)
+imagesc(dict)
+
+xc = (corrcoef(dict'));
+subplot(212)
+imagesc((xc))
+
+xc = (xc(:));
+G = mean(xc)
+
+%%
+% Luis Gomez's options:
+%{
+options=gaoptimset;
+
+options.CrossoverFraction=.6;%default.8
+options.PopInitRange(1,:)=-999*ones([1 size]);%options.PopInitRange=[0;1]
+options.PopInitRange(2,:)=999*ones([1 size]);
+options.PopulationSize=5000;%options.PopulationSize=3000
+options.PopulationType='doubleVector';%'bitString';%'doubleVector';
+
+xsymm=5000*rand([options.PopulationSize size]);
+
+options.EliteCount=5;%options.EliteCount=2
+options.MigrationDirection='forward';%options.MigrationDirection='forward'
+options.MigrationInterval=10;%options.MigrationInterval=20
+options.MigrationFraction=0.1;%options.MigrationFraction=0.2
+options.Generations=100;%options.Generations=200
+options.TimeLimit=inf;%options.TimeLimit=inf
+options.FitnessLimit=-inf;%options.FitnessLimit=-inf
+options.StallGenLimit=200000;%options.StallGenLimit=1000
+options.StallTimeLimit=20000;%options.StallTimeLimit=20
+options.TolFun=1e-6;%options.TolFun=1e-6
+options.TolCon=1e-6;%options.TolCon=1e-6
+options.InitialPopulation=xsymm;%xsymm;%options.InitialPopulation=[]
+options.InitialScores=[];%options.InitialScores=[]
+options.InitialPenalty=10;%options.InitialPenalty=10
+options.PenaltyFactor=100;%options.PenaltyFactor=100
+options.PlotInterval=10;%options.PlotInterval=1
+options.CreationFcn=@gacreationuniform;%options.CreationFcn=@gacreationuniform
+options.FitnessScalingFcn=@fitscalingrank;%options.FitnessScalingFcn=@fitscalingrank
+
+options.SelectionFcn=@selectionstochunif
+options.CrossoverFcn=@crossoverscattered;%arithmetic;%options.CrossoverFcn=@crossoverscattered
+options.MutationFcn={@mutationgaussian 1 1};%options.MutationFcn={{@mutationgaussian 1  1}}
+options.HybridFcn=[];%options.HybridFcn=[]
+options.Display='iter';%options.Display='final'
+options.PlotFcns=[];%options.PlotFcns=[]
+options.OutputFcns={[@gaoutputgen1]};
+options.Vectorized='off';%options.Vectorized='off'
+%}

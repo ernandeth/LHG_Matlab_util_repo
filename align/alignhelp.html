@@ -1,0 +1,610 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+<HEAD>
+   <TITLE></TITLE>
+   <META NAME="Author" CONTENT="Cengizhan Ozturk">
+   <META NAME="GENERATOR" CONTENT="User-Agent: Mozilla/3.0Gold (Macintosh; I; 68K)">
+</HEAD>
+<BODY BACKGROUND="chalk.jpg">
+
+<P><IMG SRC="atwork.gif" HEIGHT=39 WIDTH=36></P>
+
+<TABLE BORDER=2 CELLSPACING=2 CELLPADDING=2 BGCOLOR="#FFFFFF" >
+<TR ALIGN=CENTER VALIGN=TOP>
+<TD ALIGN=CENTER VALIGN=CENTER BGCOLOR="#FFFFFF">
+<H1><B><FONT SIZE=+4>ALIGN v(1.1)</FONT></B></H1>
+</TD>
+
+<TD><B><FONT SIZE=+1>A MATLAB Package </FONT></B>
+<P><B><FONT SIZE=+1>for alignment using Euclidean distance maps</FONT></B>.</P>
+</TD>
+</TR>
+</TABLE>
+
+<CENTER><P><B><FONT SIZE=+1>USER GUIDE</FONT></B></P></CENTER>
+
+<H3>
+<HR WIDTH="100%"><FONT SIZE=+1>WHAT IS NEW? <FONT COLOR="#006600">(Colored
+green in the text)</FONT></FONT></H3>
+
+<UL>
+<LI><FONT SIZE=+1>Long delayed adaptation for Matlab V. The initial command
+has been changed to 'dmalign2' due to conflict with Matlab's own align
+routine.</FONT></LI>
+
+<LI><FONT SIZE=+1>Some further vectorizations and code optimizations are
+done in getting the residual distances.</FONT></LI>
+
+<LI><FONT SIZE=+1>Mex-files are now available for SGI-machines, as well
+as SUN and macintosh platforms, for both Matlab 4.2 and 5.</FONT></LI>
+
+<LI><FONT SIZE=+1>A 2D grayscale convertion routine has been added to convert
+original grayscale images after binary contour alignment.</FONT></LI>
+
+<LI><FONT SIZE=+1>A better version of 3D plotting has been added</FONT></LI>
+</UL>
+
+<P>
+<HR WIDTH="100%"></P>
+
+<P><FONT SIZE=+1><B>CONTENTS</B>:</FONT></P>
+
+<UL>
+<LI><FONT SIZE=+1><A HREF="#t1">Disclaimer</A></FONT></LI>
+
+<LI><FONT SIZE=+1><A HREF="#t2">Introduction</A></FONT></LI>
+
+<LI><FONT SIZE=+1><A HREF="#t3">Quick Start</A></FONT></LI>
+
+<LI><FONT SIZE=+1><A HREF="#tDEMOS">Demos</A></FONT></LI>
+
+<LI><FONT SIZE=+1><A HREF="#t4">Technical Information</A></FONT></LI>
+
+<LI><FONT SIZE=+1><A HREF="#t5">Included Files</A></FONT></LI>
+
+<LI><FONT SIZE=+1><A HREF="#tcontact">Contact Info and Download Site</A></FONT></LI>
+</UL>
+
+<P>
+<HR WIDTH="100%"></P>
+
+<P><A NAME="t1"></A><B><FONT SIZE=+1>DISCLAIMER</FONT></B></P>
+
+<P>THIS SOFTWARE IS BEING PROVIDED TO YOU 'AS IS.' WE MAKE NO EXPRESS,
+IMPLIED OR STATUTORY WARRANTY OF ANY KIND FOR THE SOFTWARE INCLUDING, BUT
+NOT LIMITED TO, ANY WARRANTY OF PERFORMANCE, MERCHANTABILITY OR FITNESS
+FOR A PARTICULAR PURPOSE IN NO EVENT WILL THE IMAGING AND COMPUTER VISION
+CENTER BE LIABLE TO LICENSEE OR ANY THIRD PARTY FOR ANY DAMAGES, INCLUDING
+LOST PROFITS OR OTHER INCIDENTAL OR CONSEQUENTIAL DAMAGES, EVEN IF THE
+CENTER HAS BEEN ADVISED OF THE POSSIBILITY THEREOF.</P>
+
+<P>This software program is owned by Imaging and Computer Vision Center,
+but may be freely used, reproduced and modified but not distributed by
+Licensee. Licensee agrees that any copies of the software program will
+contain the same proprietary notices and warranty disclaimers which appear
+in this software program.</P>
+
+<P>
+<HR WIDTH="100%"></P>
+
+<P><A NAME="t2"></A><FONT SIZE=+1><B>INTRODUCTION</B>:</FONT></P>
+
+<P><FONT SIZE=+1>This package is used for alignment of data sets based
+on the Euclidean distance transform and the Marquardt-Levenberg optimization
+algorithm. The proposed approach operates on pixel or voxel descriptions
+of objects, and estimates the parameters of an affine or rigid body space
+transformations for optimal alignment. It can work with 2 or 3 dimensional
+objects.</FONT></P>
+
+<P><FONT SIZE=+1>Detailed information about this technique can be found
+in the following paper:</FONT></P>
+
+<UL>
+<DT><B><FONT SIZE=+1>Multidimensional Alignment Using the Euclidean Distance
+Transform </FONT></B></DT>
+
+<DT><FONT SIZE=+1>by Dorota Kozinska, Oleh J. Tretiak, Jonathan Nissanov,
+and Cengizhan Ozturk</FONT></DT>
+
+<DT><FONT SIZE=+1>Accepted in Computer Graphics and Image Processing.</FONT></DT>
+</UL>
+
+<P>
+<HR WIDTH="100%"></P>
+
+<P><A NAME="t3"></A><B><FONT SIZE=+1>QUICK START</FONT></B></P>
+
+<P><FONT SIZE=+1>Put the ALIGN folder inside the MATLAB Toolbox folder
+and start MATLAB. Before running any large datasets (or demo 5) first read
+the <A HREF="#tmemory">memory requirements</A> for distance maps, understand
+fully the required disk and RAM spaces. If you are using any computer other
+than SGI, Macintosh or Sun (Solaris) you need different mex files, please
+contact me for the availability of these mex-files. If you fail to do so
+the program can (can is very optimistic it WILL) crash.</FONT></P>
+
+<P><FONT SIZE=+1>Type &quot;<FONT COLOR="#006600">dmalign2</FONT>&quot;
+at the command line and you should get:</FONT></P>
+
+<P><IMG SRC="screen1.GIF" HSPACE=20 HEIGHT=339 WIDTH=451></P>
+
+<UL>
+<LI><FONT SIZE=+1><B>ABOUT:</B> Shows information about the program.</FONT></LI>
+
+<LI><FONT SIZE=+1><B>GRAYSCALE: </B>Opens the Grayscale Convertion Interface</FONT></LI>
+
+<LI><FONT SIZE=+1><B>DEMOS:</B> Shows a menu of demo choices.</FONT></LI>
+
+<LI><FONT SIZE=+1><B>QUIT:</B> Quits the program.</FONT></LI>
+
+<LI><FONT SIZE=+1><B>ALIGN:</B> Opens the General Alignment Interface.
+</FONT></LI>
+</UL>
+
+<P><IMG SRC="screen2.GIF" HEIGHT=374 WIDTH=483></P>
+
+<P><FONT SIZE=+1>General Alignment Interface:</FONT></P>
+
+<UL>
+<LI><FONT SIZE=+1><B>Dimensions </B>have to be correctly chosen according
+to the data (You have to always assume that no input error checking is
+done).</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Width, height, depth</B> are dimensions of pixel or
+voxel space. The reference set must fit within this space. No negative
+coordinates are permitted. </FONT></LI>
+
+<LI><FONT SIZE=+1><B>Transformation</B> . Select between affine (4 parameter
+for 2D, 9 parameter for 3D) and rigid body (3 parameter for 2D, 6 parameter
+for 3D). There will be a scaling (equals the determinant of the matrix)
+in the affine case. </FONT></LI>
+
+<LI><FONT SIZE=+1><B>Sampling</B> If &quot;Use all points&quot; is chosen,
+than all of the points are used in the optimization, if not the number
+of randomly selected points desired must be specified. Using all the points
+can be slow for large datsets. For most of the objects, a reasonable sample
+is enough, please look at the above mentioned paper for more details about
+this process. (For those interested in modifying the demo settings, the
+internal variable containing the number of points is called randsamp).</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Alignment</B> Single alignment aligns only one testx.mat
+data (x is specified in testno), batch alignment will align the desired
+number from the teststart to testend. If you are doing a batch, do not
+flush the distancemap from the memory and disable plotting routines.</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Refno </B>is reference number (eg: if it is 1 this
+program loads ref1.mat).</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Testno </B>is the test file number (eg: if it is 1
+this program loads test1.mat).</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Distance Map location </B>Allows selection of location,
+RAM or disk, for the distancemap (It's internal parameter is dmloc).</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Angular and translational thresholds</B> define stopping
+criterion (together with the maximum iteration number).</FONT></LI>
+
+<LI><FONT SIZE=+1><B>The two parameters</B> of M-L optimization has to
+be given here. For further information refer to the paper.</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Maximum case 3 iteration</B> determine a breaking
+point in the loop for case 3 where the search may get lost (see paper for
+details). If after the specified number of iterations no solution is found,
+the step is readjusted and a new search is started (It's internal parameter
+is maxiterloop).</FONT></LI>
+
+<LI><FONT SIZE=+1><B>Replace outliers: </B>At each iteration the worst
+point is replaced with a random point from the test set. This option should
+be used to align objects which are partially occluded. </FONT></LI>
+
+<LI><FONT SIZE=+1><B>Clear DM after alignment:</B> If not chosen distancemap
+is kept in memory (useful for back to back alignments using the same reference),
+if chosen, it is flushed. This package can hold at most one distance map
+in RAM at a given time. Before loading or generating a new one, please
+flush the old one from the memory.</FONT></LI>
+
+<LI><FONT SIZE=+1>If <B>saving parameters</B> option is turned on (It's
+flag: saveparam) the following will be saved at the end of the search process:</FONT></LI>
+
+<UL>
+<LI><FONT SIZE=+1>param1.mat (if testno is 1) will be saved in the current
+folder which contains the transformation parameters:</FONT></LI>
+
+<UL>
+<LI><FONT SIZE=+1>for Rigid Body it will contain: tt=[xrot,yrot,zrot,xtrans,ytrans,ztrans]
+where rotational parameters are in radian (relative to centroid of object).</FONT></LI>
+
+<LI><FONT SIZE=+1>for affine it will contain the desired 2x2 or 3x3 matrix</FONT></LI>
+</UL>
+
+<LI><FONT SIZE=+1>err1.mat (if testno is 1) which contains variable err;
+where each row gives mean, std, and max errors at each iteration. Irregardless
+of whether you have chosen a test sample or not, the last row of errx.mat
+is the errors of ALL points.</FONT></LI>
+</UL>
+</UL>
+
+<UL>
+<LI><FONT SIZE=+1><B>Plotflags</B>: if &quot;plot during the simulation&quot;
+is chosen, one can follow the points move as they are aligned. One can
+also choose to see the results at the end. During the simulation plotting
+is disabled for 3D cases (Flags: plotflag and plotfinal). It is fun to
+see the selection of points in the occlusion case with outlier removal
+option on. !!</FONT></LI>
+</UL>
+
+<P><FONT SIZE=+1><B>Saving as default</B> can be very helpful since default
+interface settings are saved in the current active MATLAB folder and when
+align is called, it automatically loads the default setting residing in
+that folder.<B> </B></FONT></P>
+
+<P><FONT SIZE=+1><B>Align now</B> will start alignment. </FONT></P>
+
+<P><IMG SRC="screen3.GIF" HEIGHT=328 WIDTH=406></P>
+
+<H3><FONT COLOR="#006600"><FONT SIZE=+1>Grayscale Convertion Interface:</FONT></FONT></H3>
+
+<P><FONT COLOR="#006600"><FONT SIZE=+1>Dimensions (as before) give the
+size of the plane/voxel space. (This is implemented currently not maximizing
+the speed but flexibility in mind, we currently use this lookup table approach
+for the correction of non-linear lens distortions. 3D implementation is
+not ready yet) It can do a single or batch processing. For a bunch of 2D-2D
+alignment followed by grayscale registration the following m-file in SUN
+might give some idea for the necessary command callbacks and removal of
+space occupying distancemaps during the process:</FONT></FONT></P>
+
+<UL>
+<PRE>% 
+% batchgrayscale.m  
+%  
+% This is batch file to do a set of 2D and 2D alignments  
+% and later correcting grayscale values using the found parameters  
+%  It contains some back to shell commands to remove  
+% the distancemaps   (IN UNIX !!)
+%  
+% Cengizhan Ozturk  
+% cozturk@mri.jhu.edu  
+% 9/15/97  
+%</PRE>
+
+<PRE>% ALIGNMENT PART  
+%  
+% put start and end numbers here  
+%  
+st=1;  
+ed=375; 
+
+gsname='gs.';  % grayscale files base name</PRE>
+
+<PRE>bfw=640; % blockface images width  
+bfh=480; % blockface images height  
+% </PRE>
+
+<PRE>for jj=st:ed  </PRE>
+
+<UL>
+<PRE>%  
+% make the alignment   (between ref1.mat to ref375.mat and test1.mat to test375.mat)
+%  
+% m2D(testno,width,height,saveparam,randsamp,exitflag,plotflag,...  
+% plotfinal,remout,angtresh,transtresh,maxiter,alfa,vv,dmloc,maxiterloop)</PRE>
+
+<PRE>m2D(jj,jj,bfw,bfh,1,0,1,0,0,1,0.0001,0.0001,100,2,2,0,10); </PRE>
+
+<PRE>%  
+% remove the distancemap  
+%  </PRE>
+
+<PRE>eval(['!rm distancemap' int2str(jj)]); </PRE>
+</UL>
+
+<PRE>end;</PRE>
+
+<PRE>% GRAYSCALE PART    (convertion of gs1.001 to gs.375.mat)</PRE>
+
+<PRE>for jj=st:ed,  </PRE>
+
+<UL>
+<PRE>%  
+% convert the grayscale image  (new image will be in raw format, same name with prefix of 'n')
+%  
+if jj&lt;10,  filen2=[gsname '00' int2str(jj)];  end;  
+if (jj&gt;9)&amp;(jj&lt;100),  filen2=[gsname '0' int2str(jj)];  end;  
+if jj&gt;99,  filen2=[gsname int2str(jj)]; end;  
+%  
+if exist(['param' int2str(jj) '.mat']) &gt;0  </PRE>
+
+<UL>
+<PRE>
+gsinterp2(bfw,bfh,jj,filen2); </PRE>
+</UL>
+
+<PRE>end;  
+%</PRE>
+</UL>
+
+<PRE>end;</PRE>
+</UL>
+
+<P><FONT SIZE=+1>You are now ready to give the package a test run. We suggest
+you review the demos first and return back and try to call the demos directly
+from the user interface and later from the command line using different
+options.</FONT></P>
+
+<P>
+<HR WIDTH="100%"></P>
+
+<P><A NAME="tDEMOS"></A><B><FONT SIZE=+1>DEMOS</FONT></B></P>
+
+<P><FONT SIZE=+1>5 demos are present. For the first four, the reference
+and test sets are already given in the folder. For the fifth one, they
+will be generated when it is called for the first time. </FONT></P>
+
+<P><FONT SIZE=+1><B>Demo 1 :</B> 2D ellipse rigid body</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>Settings:</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>testno=9001; refno=9001; width=300; height=300; saveparam=0;
+randsamp=20; exitflag=1; plotflag=1; plotfinal=1; remout=0; angtresh=0.000001;
+transtresh=0.000001; maxiter=200; alpha=2; vv=2; dmloc=0; maxiterloop=20;
+</FONT></P>
+</UL>
+
+<P><FONT SIZE=+1>Callback:</FONT></P>
+
+<UL>
+<DT><FONT SIZE=+1>m2D(testno,refno,width,height,saveparam,randsamp,exitflag,plotflag,...</FONT></DT>
+
+<DT><FONT SIZE=+1>plotfinal,remout,angtresh,transtresh,maxiter,alpha,vv,dmloc,maxiterloop);</FONT></DT>
+</UL>
+</UL>
+
+<P><FONT SIZE=+1><B>Demo 2: </B>2D ellipse, affine</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>Settings:</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>testno=9002; refno=9002; width=100; height=100; saveparam=0;
+randsamp=40; exitflag=1; plotflag=1; plotfinal=1; remout=0; afftresh=0.0000001;
+maxiter=200; alpha=2; vv=2; dmloc=0; maxiterloop=20; </FONT></P>
+</UL>
+
+<P><FONT SIZE=+1>Callback:</FONT></P>
+
+<UL>
+<DT><FONT SIZE=+1>m2Daff(testno,refno,width,height,saveparam,randsamp,exitflag,plotflag,...</FONT></DT>
+
+<DT><FONT SIZE=+1>plotfinal,remout,afftresh,maxiter,alpha,vv,dmloc,maxiterloop);</FONT></DT>
+</UL>
+</UL>
+
+<P><FONT SIZE=+1><B>Demo 3: </B>2D ellipse, rigid body with occlusion and
+false contours</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>Settings:</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>testno=9003; refno=9003; width=100; height=100; saveparam=0;
+randsamp=20; exitflag=1; plotflag=1; plotfinal=1; remout=0; angtresh=0.000001;
+transtresh=0.000001; maxiter=200; alpha=2; vv=2; dmloc=0; maxiterloop=20;
+</FONT></P>
+</UL>
+
+<P><FONT SIZE=+1>Callback:</FONT></P>
+
+<UL>
+<DT><FONT SIZE=+1>m2D(testno,refno,width,height,saveparam,randsamp,exitflag,plotflag,...</FONT></DT>
+
+<DT><FONT SIZE=+1>plotfinal,remout,angtresh,transtresh,maxiter,alpha,vv,dmloc,maxiterloop);</FONT></DT>
+</UL>
+</UL>
+
+<P><FONT SIZE=+1><B>Demo 4: </B>Same as demo 3 but with outliar removal
+option turned on</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>Settings:</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>testno=9004; refno=9004; width=100; height=100; saveparam=0;
+randsamp=20; exitflag=1; plotflag=1; plotfinal=1; remout=1; angtresh=0.000001;
+transtresh=0.000001; maxiter=200; alpha=2; vv=2; dmloc=0; maxiterloop=20;
+</FONT></P>
+</UL>
+
+<P><FONT SIZE=+1>Callback:</FONT></P>
+</UL>
+
+<UL>
+<UL>
+<DT><FONT SIZE=+1>m2D(testno,refno,width,height,saveparam,randsamp,exitflag,plotflag,...</FONT></DT>
+
+<DT><FONT SIZE=+1>plotfinal,remout,angtresh,transtresh,maxiter,alpha,vv,dmloc,maxiterloop);</FONT></DT>
+</UL>
+</UL>
+
+<P><FONT SIZE=+1><B>Demo 5: </B>3D ellipsoid, rigid body</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>Settings:</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>testno=9005; refno=9005; width=50; height=50; depth=50;
+saveparam=0; randsamp=100; exitflag=1; plotflag=0; plotfinal=1; remout=0;
+angtresh=0.000001; transtresh=0.000001; maxiter=200; alpha=2; vv=2; dmloc=0;
+maxiterloop=20; </FONT></P>
+</UL>
+
+<P><FONT SIZE=+1>Callback:</FONT></P>
+
+<UL>
+<DT><FONT SIZE=+1>m3D(testno,refno,width,height,depth,saveparam,randsamp,exitflag,plotflag,...</FONT></DT>
+
+<DT><FONT SIZE=+1>plotfinal,remout,angtresh,transtresh,maxiter,alpha,vv,dmloc,maxiterloop);</FONT></DT>
+</UL>
+</UL>
+
+<P>
+<HR WIDTH="100%"><A NAME="t4"></A><B><FONT SIZE=+1>TECHNICAL INFORMATION</FONT></B></P>
+
+<P><FONT SIZE=+1>The alignment program first looks whether distancemapx
+(DM) is in memory or not. If it can not find it in RAM it looks ONLY inside
+the current folder for a file named 'distancemapx' (x is refno). If it
+finds distancemapx, it is loaded. If there is no distancemapx, refx.mat
+(which contains ref) is loaded and distancemapx is generated AND saved.
+Next, the program loads desired testx.mat (x is testno) which should contain
+variable test. Both test and ref are in 3 column format where each point
+should be in a row.</FONT></P>
+
+<P><FONT SIZE=+1>The progress of the alignment can be seen in the command
+window by the display of optimization loop choices and the resulting error
+values. The remaining errors for the whole point set are given at the end.
+If plotting is active there might be several plots the last one containing
+a return button to go back to the program. Before returning all the plots
+are discarded.</FONT></P>
+
+<P><FONT SIZE=+1>User interface is handled by <FONT COLOR="#006600">dmalign2.m</FONT>.
+It calls 4 different functions: m2D, m3D, m2Daff, m3Daff. One can always
+call these functions individually which should be the choice for any complex
+batch processing. They all require more than 15 input parameters (hence
+the reason for a user interface!). Help is available at the beginning of
+each function. Although these functions could have been combined into a
+single, more complex function, they have been kept separate to make the
+process visible to the user and to allow easy custom modifications. These
+functions call several other smaller functions either to transform the
+data points or to find the gradients. The most important functions are:</FONT></P>
+
+<UL>
+<P><FONT SIZE=+1>ndist9.mex and ndist2D.mex. </FONT></P>
+</UL>
+
+<P><FONT SIZE=+1><FONT COLOR="#006600">Command line help has been added
+for these mex files.</FONT> The m-files can be used in any machine running
+MATLAB, but mex files are machine specific. Ndist9 and ndist2D are currently
+in SGI (mexsg or mexsg64), MACINTOSH fat or in SUN SOLARIS format. Machintosh
+fat mex files can be used both in PowerMac and 68040 systems. Other system
+users can also use this package but only after compiling the mex-files
+from the original c-files which are NOT included in the package. Please
+contact the Imaging and Computer Vision Center for the availability of
+the correct mex files or original c-codes for your platform.</FONT></P>
+
+<P><FONT SIZE=+1>These mex files generate, save, load, read and flush the
+distance map. Their callback is ndist9(X,width,height,depth,ch,refno) and
+ndist2D(X,width,height,ch,refno): </FONT></P>
+
+<UL>
+<LI><FONT SIZE=+1>ch=2 calculates the distance map </FONT></LI>
+
+<LI><FONT SIZE=+1>ch=3 calculates and saves to disk (for low RAM cases
+) for ndist9.mex </FONT></LI>
+
+<LI><FONT SIZE=+1>ch=4 saves the distancemapx (x is refno) </FONT></LI>
+
+<LI><FONT SIZE=+1>ch=6 loads distancemapx to RAM </FONT></LI>
+
+<LI><FONT SIZE=+1>ch=8 gives back the Euclidean distance vector values
+from RAM </FONT></LI>
+
+<LI><FONT SIZE=+1>ch=9 gives back the Euclidean distance vector values
+array from DISK </FONT></LI>
+
+<LI><FONT SIZE=+1>ch=10 clears up the distancemap from memory</FONT></LI>
+</UL>
+
+<P><A NAME="tmemory"></A><FONT SIZE=+1>As you can see there are two options
+to generate the distance map for 3-dimensional cases. The choice is determined
+by the amount of RAM and the size of the voxel space. The memory requirement
+is calculated as: </FONT></P>
+
+<UL>
+<P><FONT SIZE=+1><B>Mem. Req: width*height*depth*3*2 bytes</B> (for 3D)</FONT></P>
+
+<P><FONT SIZE=+1><B>Mem. Req: width*height*2*2 bytes</B> (for 2D)</FONT></P>
+</UL>
+
+<P><FONT SIZE=+1>Each vector component is stored both in RAM and disk as
+short integer. Had it been kept in MATLAB matrix form the memory requirements
+would have been quadrupled. Separating the distance map related routines
+from the rest of the program and integrating them by dynamic linking through
+MATLAB's mex interface, combines the flexibility of Matlab with the optimum
+memory usage.</FONT></P>
+
+<P><FONT SIZE=+1>When calculating memory requirements, one has to consider
+also the memory needed for the test and ref datasets, plotting routines
+and general overhead for MATLAB. If enough memory is not available than
+the distance map location should be chosen as &quot;in disk&quot; (dmloc=1).
+This automatically generates distance map using ch=3 option when necessary,
+and reads it directly from disk during optimization. This will be slower
+than the case when the distance map is in RAM.</FONT></P>
+
+<P><A NAME="t5"></A><B><FONT SIZE=+1>INCLUDED FILES</FONT></B></P>
+
+<P><FONT SIZE=+1>M-files:</FONT></P>
+
+<UL>
+<LI><FONT COLOR="#006600"><FONT SIZE=+1>dmalign2.m</FONT></FONT></LI>
+
+<LI><FONT SIZE=+1>m2D.m, m3D.m, m2Daff.m, m3Daff.m, <FONT COLOR="#006600">gsinterp2.m,
+gsinterp3.m</FONT></FONT></LI>
+
+<LI><FONT SIZE=+1>finddist2.m, finddist2D.m, getMx.m, getMy.m, getMz.m,
+getMz2D.m, getnewP.m, getnewP2D.m, getRz2D.m, getXYZ.m,</FONT></LI>
+
+<LI><FONT SIZE=+1>plotfancy.m, rotx.m, roty.m, rotz.m, <FONT COLOR="#006600">orbit.m</FONT></FONT></LI>
+</UL>
+
+<P><FONT SIZE=+1>MAT-files:</FONT></P>
+
+<UL>
+<LI><FONT SIZE=+1>alignpref.mat,</FONT></LI>
+
+<LI><FONT SIZE=+1>ref9001.mat ref9002.mat ref9003.mat ref9004.mat </FONT></LI>
+
+<LI><FONT SIZE=+1>test9001.mat test9002.mat test9003.mat test9004.mat </FONT></LI>
+</UL>
+
+<P><FONT SIZE=+1>Mex-files:</FONT></P>
+
+<UL>
+<LI><FONT SIZE=+1>ndist9.mex ndist2D.mex <FONT COLOR="#006600">(or corresponding
+other mex files)</FONT></FONT></LI>
+</UL>
+
+<P><A NAME="tcontact"></A><B><FONT SIZE=+1>DO YOU WANT TO DOWNLOAD THE
+PACKAGE?</FONT></B></P>
+
+<DD><A HREF="http://cbis.ece.drexel.edu/ICVC/Align/ICVCdownload_form.html"><IMG SRC="download.gif" BORDER=0 HEIGHT=26 WIDTH=97 ALIGN=BOTTOM></A></DD>
+
+<DT><FONT SIZE=+1>For further information, bug reports or feedback please
+contact:</FONT></DT>
+
+<P><IMG SRC="mail.gif" HSPACE=10 HEIGHT=42 WIDTH=44 ALIGN=CENTER> <A HREF="mailto:cozturkc@mri.jhu.edu">SEND
+E-MAIL</A></P>
+
+<DD><B><FONT SIZE=+1><A HREF="http://www.mri.jhu.edu/~cozturk">Cengizhan
+Ozturk, MD, PhD</A></FONT></B></DD>
+
+<DD><FONT SIZE=+1>cozturk@mri.jhu.edu</FONT></DD>
+
+<DD><FONT SIZE=+1>Medical Imaging Lab - Johns Hopkins University</FONT></DD>
+
+<DD><FONT SIZE=+1>407 Traylor Building, 720 Rutland Avenue</FONT></DD>
+
+<DD><FONT SIZE=+1>Baltimore, MD </FONT></DD>
+
+<DD><FONT SIZE=+1>Office: (215) 895 1347</FONT></DD>
+
+<DT>
+<HR SIZE=4 NOSHADE WIDTH="100%"></DT>
+
+<P><FONT SIZE=-1>Visitor number <IMG SRC="http://coe.drexel.edu/ICVC/cgi-bin/Count.cgi?ft=0&dd=E&pad=0&df=alignhelp.dat">(starting
+on 1.11.1997)</FONT></P>
+
+<P><FONT SIZE=-1>Last modified 9.22.1997, by <A HREF="http://www.mri.jhu.edu/~cozturk">Cengizhan
+Ozturk.</A></FONT> </P>
+
+</BODY>
+</HTML>

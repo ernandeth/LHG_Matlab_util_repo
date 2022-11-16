@@ -1,0 +1,45 @@
+function imgOut = sprec1_wrap_par(strFile,varargin)
+% For each volume in time series, does recon of slices in parallel
+% [calls sprec1_par function for each slice]
+% 
+% $Id: sprec1_wrap_par.m 1656 2015-01-12 16:20:32Z klitinas $
+% $HeadURL: svn+ssh://klitinas@woo.engin.umich.edu/work/repos/matlab/recon/trunk/sprec1_wrap_par.m $
+
+% [args,scaninfo,kinfo] = rec_setup1(strFile,'h','l','fy');
+[args,scaninfo,kinfo] = rec_setup1(strFile,varargin{:});
+%[args,scaninfo,kinfo] = rec_setup1(strFile,'A');
+
+% [args,scaninfo,kinfo] = rec_setup1_par(strFile);
+% [args,scaninfo,kinfo] = rec_setup1_streaming_dv24(strFilePrep,'h');
+% % args.pfile = strFile;
+% % s = load('fmfile.mat');
+% % args.fm = s.fm;
+
+nslices = scaninfo.nslices;
+
+% Recon slice-by-slice
+imgOut = zeros(64,64,nslices,scaninfo.nphases-1);
+for t = 1:scaninfo.nphases-1
+    % tic;
+    
+    argsNew = args;
+    argsNew.iph = t; 
+   
+    argsNew = repmat(argsNew,scaninfo.nslices,1);
+    for i = 1:scaninfo.nslices
+        argsNew(i).isl = i;
+    end
+        
+    imgVol = zeros(64,64,nslices);
+    parfor i = 1:nslices
+        % imgSl = sprec1_rds_par(argsNew(i),scaninfo,kinfo);  
+         imgSl = sprec1_par(argsNew(i),scaninfo,kinfo);  
+        imgVol = imgVol+imgSl;
+    end
+    
+    % toc
+    % show(tile(imgVol));title(num2str(t));drawnow;
+    imgOut(:,:,:,t) = imgVol;
+    imgVol = zeros(64,64,nslices);
+
+end

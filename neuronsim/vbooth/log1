@@ -1,0 +1,215 @@
+
+                            < M A T L A B (R) >
+                  Copyright 1984-2012 The MathWorks, Inc.
+                    R2012a (7.14.0.739) 64-bit (glnxa64)
+                              February 9, 2012
+
+ 
+To get started, type one of these: helpwin, helpdesk, or demo.
+For product information, visit www.mathworks.com.
+ 
+>> >> mkdir: cannot create directory ‘/net/martin/export/home/hernan/matlab/neuronsim/vbooth/cf_0100’: File exists
+>> >> cf =
+   100
+>> >> USflag =
+     1
+Elapsed time is 665.956399 seconds.
+Elapsed time is 789.558340 seconds.
+Elapsed time is 805.614199 seconds.
+Elapsed time is 715.508054 seconds.
+Elapsed time is 687.074073 seconds.
+Elapsed time is 755.937428 seconds.
+Elapsed time is 914.984446 seconds.
+Elapsed time is 732.554564 seconds.
+Elapsed time is 816.524122 seconds.
+USflag =
+     2
+Elapsed time is 809.730536 seconds.
+Elapsed time is 672.073247 seconds.
+Elapsed time is 811.477523 seconds.
+Elapsed time is 723.771068 seconds.
+Elapsed time is 703.415293 seconds.
+Elapsed time is 843.766039 seconds.
+Elapsed time is 830.411969 seconds.
+Elapsed time is 875.910201 seconds.
+Elapsed time is 741.932927 seconds.
+Elapsed time is 936.535937 seconds.
+APmax_kgna =
+  -61.7810
+Elapsed time is 863.239459 seconds.
+APmax_kgna =
+  -61.7810  -61.7810
+Elapsed time is 739.980389 seconds.
+APmax_kgna =
+  -61.7810  -61.7810  -61.7810
+Elapsed time is 685.565135 seconds.
+APmax_kgna =
+  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 846.715823 seconds.
+APmax_kgna =
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 899.642077 seconds.
+APmax_kgna =
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 765.723445 seconds.
+APmax_kgna =
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 808.406188 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Column 8
+  -61.7810
+Elapsed time is 816.516566 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 9
+  -61.7810  -61.7810
+Elapsed time is 757.399121 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 10
+  -61.7810  -61.7810  -61.7810
+Elapsed time is 869.598223 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 11
+  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 811.127140 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 12
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 841.133621 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 13
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 771.253577 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+Elapsed time is 898.453861 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Column 15
+  -61.7810
+Elapsed time is 664.076551 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 16
+  -61.7810  -61.7810
+Elapsed time is 858.599639 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 17
+  -61.7810  -61.7810  -61.7810
+Elapsed time is 664.537303 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 18
+  -61.7810  -61.7810  -61.7810  -61.6226
+Elapsed time is 574.919108 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 19
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429
+Elapsed time is 826.028668 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 20
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396
+Elapsed time is 845.052688 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 21
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396   45.9158
+Elapsed time is 850.896385 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 21
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396   45.9158
+  Column 22
+   46.0542
+Elapsed time is 756.640421 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 21
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396   45.9158
+  Columns 22 through 23
+   46.0542   46.1891
+Elapsed time is 782.948725 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 21
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396   45.9158
+  Columns 22 through 24
+   46.0542   46.1891   46.4641
+Elapsed time is 854.135860 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 21
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396   45.9158
+  Columns 22 through 25
+   46.0542   46.1891   46.4641   46.6348
+Elapsed time is 632.091867 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 21
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396   45.9158
+  Columns 22 through 26
+   46.0542   46.1891   46.4641   46.6348   46.6503
+Elapsed time is 542.040939 seconds.
+APmax_kgna =
+  Columns 1 through 7
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 8 through 14
+  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810  -61.7810
+  Columns 15 through 21
+  -61.7810  -61.7810  -61.7810  -61.6226  -61.1429   45.2396   45.9158
+  Columns 22 through 27
+   46.0542   46.1891   46.4641   46.6348   46.6503   46.7622
+>> >> 

@@ -1,0 +1,42 @@
+function est = NNreg_imgseries(data, MyNet, output_scale, threshold)
+% function est = NNreg_imgseries(data, MyNet, output_scale, threshold)
+%
+% do the Neural Net regression using the stored NN coefficients
+% data - time series for input layer
+% output_scale - a scaling factor used to scale the NN ouput layer 
+%       so that the average output during training was 1.
+%       the true estimates are actually the output estimate divided by that
+%       scaling factor.
+% threshold - intensity threshold used to mask out voxels outside the brain.
+%       We use a fraction of the mean value of the first image in the time series.
+
+Npix = size(data,2);
+Nframes = size(data,1);
+
+% create a mask based on image intensity
+msk = data(1,:);
+th = threshold*mean(msk);
+msk(msk<th) = 0;
+msk(msk>0) = 1;
+
+% reshape data so it fits into network:
+data = reshape(data, Nframes, 1,1,Npix);
+output = zeros(Npix,1);
+
+% do the prediction.   
+for n=1:Npix
+    % DC correction:   force teh minimum to be zero (2/15/22)
+    data(:,1,1, n) = data(:,1,1, n) - min(data(:,1,1, n));
+    
+    % Scale the time course so that the first point is 1
+    scale = 1/squeeze(data(1,1,1, n));
+    if isinf(scale) scale=0; end
+    tmp = squeeze(data(:,:,:, n))*scale;
+    % mask and scale the output using the stored scaling factor
+    % calculated during training
+    est(n) =  msk(n)* predict(MyNet, tmp) / output_scale;
+end
+
+
+
+return

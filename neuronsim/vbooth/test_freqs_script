@@ -1,0 +1,6 @@
+nohup matlab -nojvm -nodisplay < test_freqs1.m > log1 &
+nohup matlab -nojvm -nodisplay < test_freqs2.m > log2 &
+nohup matlab -nojvm -nodisplay < test_freqs3.m > log3 &
+nohup matlab -nojvm -nodisplay < test_freqs4.m > log4 &
+nohup matlab -nojvm -nodisplay < test_freqs5.m > log5 &
+

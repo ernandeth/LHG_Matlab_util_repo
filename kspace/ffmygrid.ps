@@ -1,0 +1,858 @@
+%!PS-Adobe-3.0
+%%BoundingBox: 24 24 588 768
+%%Title: Enscript Output
+%%For: Brad Sutton
+%%Creator: GNU enscript 1.6.1
+%%CreationDate: Thu Nov  8 12:08:58 2001
+%%Orientation: Portrait
+%%Pages: (atend)
+%%DocumentMedia: Letter 612 792 0 () ()
+%%DocumentNeededResources: (atend)
+%%EndComments
+%%BeginProlog
+%%BeginResource: procset Enscript-Prolog 1.6 1
+%
+% Procedures.
+%
+
+/_S {	% save current state
+  /_s save def
+} def
+/_R {	% restore from saved state
+  _s restore
+} def
+
+/S {	% showpage protecting gstate
+  gsave
+  showpage
+  grestore
+} bind def
+
+/MF {	% fontname newfontname -> -	make a new encoded font
+  /newfontname exch def
+  /fontname exch def
+
+  /fontdict fontname findfont def
+  /newfont fontdict maxlength dict def
+
+  fontdict {
+    exch
+    dup /FID eq {
+      % skip FID pair
+      pop pop
+    } {
+      % copy to the new font dictionary
+      exch newfont 3 1 roll put
+    } ifelse
+  } forall
+
+  newfont /FontName newfontname put
+
+  % insert only valid encoding vectors
+  encoding_vector length 256 eq {
+    newfont /Encoding encoding_vector put
+  } if
+
+  newfontname newfont definefont pop
+} def
+
+/SF { % fontname width height -> -	set a new font
+  /height exch def
+  /width exch def
+
+  findfont
+  [width 0 0 height 0 0] makefont setfont
+} def
+
+/SUF { % fontname width height -> -	set a new user font
+  /height exch def
+  /width exch def
+
+  /F-gs-user-font MF
+  /F-gs-user-font width height SF
+} def
+
+/M {moveto} bind def
+/s {show} bind def
+
+/Box {	% x y w h -> -			define box path
+  /d_h exch def /d_w exch def /d_y exch def /d_x exch def
+  d_x d_y  moveto
+  d_w 0 rlineto
+  0 d_h rlineto
+  d_w neg 0 rlineto
+  closepath
+} def
+
+/bgs {	% x y height blskip gray str -> -	show string with bg color
+  /str exch def
+  /gray exch def
+  /blskip exch def
+  /height exch def
+  /y exch def
+  /x exch def
+
+  gsave
+    x y blskip sub str stringwidth pop height Box
+    gray setgray
+    fill
+  grestore
+  x y M str s
+} def
+
+% Highlight bars.
+/highlight_bars {	% nlines lineheight output_y_margin gray -> -
+  gsave
+    setgray
+    /ymarg exch def
+    /lineheight exch def
+    /nlines exch def
+
+    % This 2 is just a magic number to sync highlight lines to text.
+    0 d_header_y ymarg sub 2 sub translate
+
+    /cw d_output_w cols div def
+    /nrows d_output_h ymarg 2 mul sub lineheight div cvi def
+
+    % for each column
+    0 1 cols 1 sub {
+      cw mul /xp exch def
+
+      % for each rows
+      0 1 nrows 1 sub {
+        /rn exch def
+        rn lineheight mul neg /yp exch def
+        rn nlines idiv 2 mod 0 eq {
+	  % Draw highlight bar.  4 is just a magic indentation.
+	  xp 4 add yp cw 8 sub lineheight neg Box fill
+	} if
+      } for
+    } for
+
+  grestore
+} def
+
+% Line highlight bar.
+/line_highlight {	% x y width height gray -> -
+  gsave
+    /gray exch def
+    Box gray setgray fill
+  grestore
+} def
+
+% Column separator lines.
+/column_lines {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h translate
+    /cw d_output_w cols div def
+    1 1 cols 1 sub {
+      cw mul 0 moveto
+      0 d_output_h rlineto stroke
+    } for
+  grestore
+} def
+
+% Column borders.
+/column_borders {
+  gsave
+    .1 setlinewidth
+    0 d_footer_h moveto
+    0 d_output_h rlineto
+    d_output_w 0 rlineto
+    0 d_output_h neg rlineto
+    closepath stroke
+  grestore
+} def
+
+% Do the actual underlay drawing
+/draw_underlay {
+  ul_style 0 eq {
+    ul_str true charpath stroke
+  } {
+    ul_str show
+  } ifelse
+} def
+
+% Underlay
+/underlay {	% - -> -
+  gsave
+    0 d_page_h translate
+    d_page_h neg d_page_w atan rotate
+
+    ul_gray setgray
+    ul_font setfont
+    /dw d_page_h dup mul d_page_w dup mul add sqrt def
+    ul_str stringwidth pop dw exch sub 2 div ul_h_ptsize -2 div moveto
+    draw_underlay
+  grestore
+} def
+
+/user_underlay {	% - -> -
+  gsave
+    ul_x ul_y translate
+    ul_angle rotate
+    ul_gray setgray
+    ul_font setfont
+    0 0 ul_h_ptsize 2 div sub moveto
+    draw_underlay
+  grestore
+} def
+
+% Page prefeed
+/page_prefeed {		% bool -> -
+  statusdict /prefeed known {
+    statusdict exch /prefeed exch put
+  } {
+    pop
+  } ifelse
+} def
+
+% Wrapped line markers
+/wrapped_line_mark {	% x y charwith charheight type -> -
+  /type exch def
+  /h exch def
+  /w exch def
+  /y exch def
+  /x exch def
+
+  type 2 eq {
+    % Black boxes (like TeX does)
+    gsave
+      0 setlinewidth
+      x w 4 div add y M
+      0 h rlineto w 2 div 0 rlineto 0 h neg rlineto
+      closepath fill
+    grestore
+  } {
+    type 3 eq {
+      % Small arrows
+      gsave
+        .2 setlinewidth
+        x w 2 div add y h 2 div add M
+        w 4 div 0 rlineto
+        x w 4 div add y lineto stroke
+
+        x w 4 div add w 8 div add y h 4 div add M
+        x w 4 div add y lineto
+	w 4 div h 8 div rlineto stroke
+      grestore
+    } {
+      % do nothing
+    } ifelse
+  } ifelse
+} def
+
+% EPSF import.
+
+/BeginEPSF {
+  /b4_Inc_state save def    		% Save state for cleanup
+  /dict_count countdictstack def	% Count objects on dict stack
+  /op_count count 1 sub def		% Count objects on operand stack
+  userdict begin
+  /showpage { } def
+  0 setgray 0 setlinecap
+  1 setlinewidth 0 setlinejoin
+  10 setmiterlimit [ ] 0 setdash newpath
+  /languagelevel where {
+    pop languagelevel
+    1 ne {
+      false setstrokeadjust false setoverprint
+    } if
+  } if
+} bind def
+
+/EndEPSF {
+  count op_count sub { pos } repeat	% Clean up stacks
+  countdictstack dict_count sub { end } repeat
+  b4_Inc_state restore
+} bind def
+
+% Check PostScript language level.
+/languagelevel where {
+  pop /gs_languagelevel languagelevel def
+} {
+  /gs_languagelevel 1 def
+} ifelse
+%%EndResource
+%%BeginResource: procset Enscript-Encoding-88591 1.6 1
+/encoding_vector [
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclam       	/quotedbl     	/numbersign   	
+/dollar       	/percent      	/ampersand    	/quoteright   	
+/parenleft    	/parenright   	/asterisk     	/plus         	
+/comma        	/hyphen       	/period       	/slash        	
+/zero         	/one          	/two          	/three        	
+/four         	/five         	/six          	/seven        	
+/eight        	/nine         	/colon        	/semicolon    	
+/less         	/equal        	/greater      	/question     	
+/at           	/A            	/B            	/C            	
+/D            	/E            	/F            	/G            	
+/H            	/I            	/J            	/K            	
+/L            	/M            	/N            	/O            	
+/P            	/Q            	/R            	/S            	
+/T            	/U            	/V            	/W            	
+/X            	/Y            	/Z            	/bracketleft  	
+/backslash    	/bracketright 	/asciicircum  	/underscore   	
+/quoteleft    	/a            	/b            	/c            	
+/d            	/e            	/f            	/g            	
+/h            	/i            	/j            	/k            	
+/l            	/m            	/n            	/o            	
+/p            	/q            	/r            	/s            	
+/t            	/u            	/v            	/w            	
+/x            	/y            	/z            	/braceleft    	
+/bar          	/braceright   	/tilde        	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/.notdef      	/.notdef      	/.notdef      	/.notdef      	
+/space        	/exclamdown   	/cent         	/sterling     	
+/currency     	/yen          	/brokenbar    	/section      	
+/dieresis     	/copyright    	/ordfeminine  	/guillemotleft	
+/logicalnot   	/hyphen       	/registered   	/macron       	
+/degree       	/plusminus    	/twosuperior  	/threesuperior	
+/acute        	/mu           	/paragraph    	/bullet       	
+/cedilla      	/onesuperior  	/ordmasculine 	/guillemotright	
+/onequarter   	/onehalf      	/threequarters	/questiondown 	
+/Agrave       	/Aacute       	/Acircumflex  	/Atilde       	
+/Adieresis    	/Aring        	/AE           	/Ccedilla     	
+/Egrave       	/Eacute       	/Ecircumflex  	/Edieresis    	
+/Igrave       	/Iacute       	/Icircumflex  	/Idieresis    	
+/Eth          	/Ntilde       	/Ograve       	/Oacute       	
+/Ocircumflex  	/Otilde       	/Odieresis    	/multiply     	
+/Oslash       	/Ugrave       	/Uacute       	/Ucircumflex  	
+/Udieresis    	/Yacute       	/Thorn        	/germandbls   	
+/agrave       	/aacute       	/acircumflex  	/atilde       	
+/adieresis    	/aring        	/ae           	/ccedilla     	
+/egrave       	/eacute       	/ecircumflex  	/edieresis    	
+/igrave       	/iacute       	/icircumflex  	/idieresis    	
+/eth          	/ntilde       	/ograve       	/oacute       	
+/ocircumflex  	/otilde       	/odieresis    	/divide       	
+/oslash       	/ugrave       	/uacute       	/ucircumflex  	
+/udieresis    	/yacute       	/thorn        	/ydieresis    	
+] def
+%%EndResource
+%%EndProlog
+%%BeginSetup
+%%IncludeResource: font Courier-Bold
+%%IncludeResource: font Courier
+/HFpt_w 10 def
+/HFpt_h 10 def
+/Courier-Bold /HF-gs-font MF
+/HF /HF-gs-font findfont [HFpt_w 0 0 HFpt_h 0 0] makefont def
+/Courier /F-gs-font MF
+/F-gs-font 10 10 SF
+/#copies 1 def
+% Pagedevice definitions:
+gs_languagelevel 1 gt {
+  <<
+    /PageSize [612 792] 
+  >> setpagedevice
+} if
+%%BeginResource: procset Enscript-Header-simple 1.6 1
+
+/do_header {	% print default simple header
+  gsave
+    d_header_x d_header_y HFpt_h 3 div add translate
+
+    HF setfont
+    user_header_p {
+      5 0 moveto user_header_left_str show
+
+      d_header_w user_header_center_str stringwidth pop sub 2 div
+      0 moveto user_header_center_str show
+
+      d_header_w user_header_right_str stringwidth pop sub 5 sub
+      0 moveto user_header_right_str show
+    } {
+      5 0 moveto fname show
+      45 0 rmoveto fmodstr show
+      45 0 rmoveto pagenumstr show
+    } ifelse
+
+  grestore
+} def
+%%EndResource
+/d_page_w 564 def
+/d_page_h 744 def
+/d_header_x 0 def
+/d_header_y 729 def
+/d_header_w 564 def
+/d_header_h 15 def
+/d_footer_x 0 def
+/d_footer_y 0 def
+/d_footer_w 564 def
+/d_footer_h 0 def
+/d_output_w 564 def
+/d_output_h 729 def
+/cols 1 def
+%%EndSetup
+%%Page: (1) 1
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 1 def
+/fname (ffmygrid.c) def
+/fdir () def
+/ftail (ffmygrid.c) def
+% User defined strings:
+/fmodstr (Wed Nov 07 12:17:38 2001) def
+/pagenumstr (1) def
+/user_header_p false def
+%%EndPageSetup
+do_header
+5 716 M
+(/*  ffmygrid.c   ) s
+5 705 M
+( ) s
+5 694 M
+(Usage in Matlab:  [k lx ly bx by] = ffmygrid\(uu,vv,z,xi,yi,Lx,Ly,'Option'\)) s
+5 672 M
+(        \(uu,vv\) is k space coordinates.) s
+5 661 M
+(        z is the value at those points.) s
+5 650 M
+(        xi,yi are Cartesian coordinates you wish to have data.) s
+5 639 M
+(        Lx, Ly is convolution kernel size in grid.) s
+5 628 M
+(        'Option' specifies the kind of kernel) s
+5 617 M
+(        'KB' 2d separable Kaiser Bessel function) s
+5 606 M
+(                    this is based on 'a Fast Sinc Function Gridding Alogrithm) s
+5 595 M
+(                    for  Fourier Inversion in Computer Tomography' ) s
+5 584 M
+(                    by J.K.O'sullivan, IEEE t-mi, Dec 1985) s
+5 573 M
+(                    ) s
+5 562 M
+(lx ly bx by ) s
+5 529 M
+(                    Sangwoo Lee, 03/02/2000  */) s
+5 518 M
+(#include "mex.h") s
+5 507 M
+(#include "math.h") s
+5 496 M
+(#include "string.h") s
+5 463 M
+(/* function for the zero order modified Bessel funciton of the first kind) s
+5 452 M
+( */) s
+5 441 M
+(double bessi0\(double x\)) s
+5 430 M
+({) s
+5 419 M
+(        double fans;) s
+5 408 M
+(        double y,xx,ax,ans;) s
+5 397 M
+(        x = fabs\(x\);) s
+5 386 M
+(        xx=x; ) s
+5 375 M
+(        if \(\(ax=fabs\(xx\)\) < 3.75\) {) s
+5 364 M
+(                y=x/3.75;) s
+5 353 M
+(                y*=y;) s
+5 342 M
+(                ans=1.0+y*\(3.5156229+y*\(3.0899424+y*\(1.2067492) s
+5 331 M
+(                        +y*\(0.2659732+y*\(0.360768e-1+y*0.45813e-2\)\)\)\)\);) s
+5 320 M
+(        } else {) s
+5 309 M
+(                y=3.75/ax;) s
+5 298 M
+(                ans=\(exp\(ax\)/sqrt\(ax\)\)*\(0.39894228+y*\(0.1328592e-1) s
+5 287 M
+(                        +y*\(0.225319e-2+y*\(-0.157565e-2+y*\(0.916281e-2) s
+5 276 M
+(                        +y*\(-0.2057706e-1+y*\(0.2635537e-1+y*\(-0.1647633e-1) s
+5 265 M
+(                        +y*0.392377e-2\)\)\)\)\)\)\)\);) s
+5 254 M
+(        }) s
+5 243 M
+(        fans=\(double\)ans;) s
+5 232 M
+(        return fans;) s
+5 221 M
+(}) s
+5 199 M
+(/* This function returns the minimum value in an array of n elements*/) s
+5 188 M
+(double min\(double x[], int n\)) s
+5 177 M
+({) s
+5 166 M
+(  int k;) s
+5 155 M
+(  double min_x;) s
+5 144 M
+(  ) s
+5 133 M
+(  min_x = x[0];) s
+5 122 M
+(  for \(k=1; k<=n-1; k++\) {) s
+5 111 M
+(    if \(x[k] < min_x\)) s
+5 100 M
+(      min_x = x[k];) s
+5 89 M
+(  }) s
+5 78 M
+(  return min_x;) s
+5 67 M
+(}) s
+5 45 M
+(void mexFunction\(int nlhs, mxArray *plhs[],int nrhs, const mxArray *prhs[]\)) s
+5 34 M
+({) s
+5 23 M
+(double *xx, *yy, *xi, *yi, *zzr, *zzi, *lx, *ly;) s
+5 12 M
+(double *resultr, *resulti, *rlx, *rly, *rbx, *rby, Lx, Ly, Bx, By, Lxy;) s
+_R
+S
+%%Page: (2) 2
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 2 def
+/fname (ffmygrid.c) def
+/fdir () def
+/ftail (ffmygrid.c) def
+% User defined strings:
+/fmodstr (Wed Nov 07 12:17:38 2001) def
+/pagenumstr (2) def
+/user_header_p false def
+%%EndPageSetup
+do_header
+5 716 M
+(double Kxstep, Kystep;) s
+5 705 M
+(char *opt;) s
+5 694 M
+(int optlen;) s
+5 683 M
+(int i,j,k, counter=0, starti, startj, endi,endj;) s
+5 672 M
+(float pi=3.141592;) s
+5 661 M
+(int M,N,L,N1,N2; ) s
+5 650 M
+(int flag=0;) s
+5 639 M
+(double distx, disty, *weight, minxi, minyi;) s
+5 628 M
+(  ) s
+5 617 M
+(/* get input arguments */) s
+5 606 M
+(xx = mxGetPr\(prhs[0]\);   ) s
+5 595 M
+(yy = mxGetPr\(prhs[1]\);) s
+5 584 M
+(zzr = mxGetPr\(prhs[2]\);) s
+5 573 M
+(zzi = mxGetPi\(prhs[2]\);) s
+5 562 M
+(xi = mxGetPr\(prhs[3]\);) s
+5 551 M
+(yi = mxGetPr\(prhs[4]\);) s
+5 540 M
+(lx = mxGetPr\(prhs[5]\);) s
+5 529 M
+(ly = mxGetPr\(prhs[6]\);) s
+5 507 M
+(  ) s
+5 496 M
+(if\(nrhs>8 | nrhs<6\){mexErrMsgTxt\("\\ninvalid number of input"\);}) s
+5 474 M
+(optlen=mxGetNumberOfElements\(prhs[7]\)+1;) s
+5 463 M
+(opt=mxCalloc\(optlen,sizeof\(char\)\);) s
+5 452 M
+(mxGetString\(prhs[7],opt,optlen\);) s
+5 441 M
+(  ) s
+5 430 M
+(if\(mxIsComplex\(prhs[0]\)\){ mexErrMsgTxt\("xx is not real"\);}) s
+5 419 M
+(if\(mxIsComplex\(prhs[1]\)\){ mexErrMsgTxt\("yy is not real"\);}) s
+5 408 M
+(if\(mxIsComplex\(prhs[2]\)\){ flag=1;}) s
+5 397 M
+(if\(mxIsComplex\(prhs[3]\)\){ mexErrMsgTxt\("xi is not real"\);}) s
+5 386 M
+(if\(mxIsComplex\(prhs[4]\)\){ mexErrMsgTxt\("yi is not real"\);}) s
+5 375 M
+( ) s
+5 364 M
+(if\(\(L = mxGetM\(prhs[3]\)\)==1\){L=mxGetN\(prhs[3]\);} ) s
+5 353 M
+(if\(\(M = mxGetM\(prhs[4]\)\)==1\){M=mxGetN\(prhs[4]\);}) s
+5 342 M
+(if\(\(N = mxGetM\(prhs[0]\)\)==1\){N=mxGetN\(prhs[0]\);} ) s
+5 331 M
+(if\(\(N1 = mxGetM\(prhs[1]\)\)==1\){N1=mxGetN\(prhs[1]\);} ) s
+5 320 M
+(if\(\(N2 = mxGetM\(prhs[2]\)\)==1\){N2=mxGetN\(prhs[2]\);} ) s
+5 298 M
+(if\(\(N!=N1\)|\(N1!=N2\)\){mexErrMsgTxt\("input grid dimension does not match"\);} ) s
+5 276 M
+(/*mexPrintf\("\\n%s",opt\);) s
+5 265 M
+(mexPrintf\("\\nL=%d, M=%d, N=%d, N1=%d, N2=%d\\n",L,M,N,N1,N2\);) s
+5 254 M
+(*/) s
+5 232 M
+(if\(!\(plhs[0] = mxCreateDoubleMatrix\(M,L,mxCOMPLEX\)\)\){mexErrMsgTxt\("\\nfailed to create a matr) s
+5 221 M
+(ix"\);}) s
+5 210 M
+(if\(!\(plhs[1] = mxCreateDoubleMatrix\(1,1,mxREAL\)\)\){mexErrMsgTxt\("\\nfailed to create a matrix") s
+5 199 M
+(\);}) s
+5 188 M
+(if\(!\(plhs[2] = mxCreateDoubleMatrix\(1,1,mxREAL\)\)\){mexErrMsgTxt\("\\nfailed to create a matrix") s
+5 177 M
+(\);}) s
+5 166 M
+(if\(!\(plhs[3] = mxCreateDoubleMatrix\(1,1,mxREAL\)\)\){mexErrMsgTxt\("\\nfailed to create a matrix") s
+5 155 M
+(\);}) s
+5 144 M
+(if\(!\(plhs[4] = mxCreateDoubleMatrix\(1,1,mxREAL\)\)\){mexErrMsgTxt\("\\nfailed to create a matrix") s
+5 133 M
+(\);}) s
+5 122 M
+(if\(!\(plhs[5] = mxCreateDoubleMatrix\(M,L,mxREAL\)\)\){mexErrMsgTxt\("\\nfailed to create a matrix") s
+5 111 M
+(\);}) s
+5 100 M
+(if\(!\(N==N1 & N==N2\)\){mexErrMsgTxt\("\\ninput \(x,y,z\) is not matching"\);}) s
+5 78 M
+(resultr = mxGetPr\(plhs[0]\);) s
+5 67 M
+(resulti = mxGetPi\(plhs[0]\);) s
+5 56 M
+(rlx = mxGetPr\(plhs[1]\);) s
+5 45 M
+(rly = mxGetPr\(plhs[2]\);) s
+5 34 M
+(rbx = mxGetPr\(plhs[3]\);) s
+5 23 M
+(rby = mxGetPr\(plhs[4]\);) s
+5 12 M
+(weight = mxGetPr\(plhs[5]\);) s
+_R
+S
+%%Page: (3) 3
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 3 def
+/fname (ffmygrid.c) def
+/fdir () def
+/ftail (ffmygrid.c) def
+% User defined strings:
+/fmodstr (Wed Nov 07 12:17:38 2001) def
+/pagenumstr (3) def
+/user_header_p false def
+%%EndPageSetup
+do_header
+5 672 M
+( Kxstep=fabs\(xi[1]-xi[0]\);) s
+5 661 M
+( Kystep=fabs\(yi[1]-yi[0]\);) s
+5 639 M
+( *rlx=Lx=Kxstep*\(*lx\);   ) s
+5 628 M
+( *rly=Ly=Kystep*\(*ly\);) s
+5 606 M
+( *rbx=Bx=pi*Lx/2/fabs\(xi[1]-xi[0]\);) s
+5 595 M
+( *rby=By=pi*Ly/2/fabs\(yi[1]-yi[0]\);) s
+5 584 M
+( ) s
+5 573 M
+( /* minxi=xi[0];) s
+5 562 M
+(   minyi=yi[M-1]; ) s
+5 551 M
+(mexPrintf\("min x = %g",minxi\); ) s
+5 540 M
+(mexPrintf\("min y = %g",minyi\);) s
+5 529 M
+( */) s
+5 507 M
+( /* minxi = min\(xi,M\);) s
+5 496 M
+( mexPrintf\("min x = %g \\n",minxi\);) s
+5 485 M
+( minyi = min\(yi,L\);) s
+5 474 M
+( mexPrintf\("min y = %g \\n",minyi\);*/) s
+5 452 M
+( minxi = -L/4.0;) s
+5 441 M
+( minyi = -M/4.0;) s
+5 430 M
+( /* mexPrintf\("min y = %g \\n",minyi\);) s
+5 419 M
+(    mexPrintf\("min x = %g \\n",minxi\);  */) s
+5 397 M
+( for\(i=0; i<L*M; i++\){ resultr[i]=0;resulti[i]=0;weight[i]=0;}) s
+5 386 M
+(   ) s
+5 375 M
+( if\(!strcmp\(opt,"CKB"\)\){  ) s
+5 353 M
+( }else if\(!strcmp\(opt,"CGAUSS"\)\){) s
+5 342 M
+(                ) s
+5 331 M
+( }else if\(!strcmp\(opt,"KB"\) | nrhs==7\){ ) s
+5 320 M
+( ) s
+5 309 M
+(   for\(k=0;k<N;k++\){) s
+5 298 M
+(          starti=\(int\)ceil\(\(xx[k]-Lx/2-minxi\)/Kxstep\);) s
+5 287 M
+(          if \(starti<0\){starti=0;}) s
+5 276 M
+(          endi=\(int\)floor\(\(xx[k]+Lx/2-minxi\)/Kxstep\);) s
+5 265 M
+(          if \(endi>=L\){endi=\(L-1\);}) s
+5 254 M
+(          /*mexPrintf\("endi = %d \\n",endi\);*/) s
+5 243 M
+(          for\(i=starti;i<endi+1;i++\){) s
+5 232 M
+(              startj=\(int\)ceil\(\(yy[k]-Ly/2-minyi\)/Kystep\);) s
+5 221 M
+(              if \(startj<0\){startj=0;}) s
+5 210 M
+(              endj=\(int\)floor\(\(yy[k]+Ly/2-minyi\)/Kystep\);) s
+5 199 M
+(              if \(endj >= M\){endj=\(M-1\);}) s
+5 188 M
+(              /* mexPrintf\("yy = %g, start = %d, end = %d \\n",yy[k],startj,endj\);*/) s
+5 177 M
+(              for\(j=startj;j<endj+1;j++\){) s
+5 166 M
+(                  /*    mexPrintf\("%d %d \\n",i,j\);  */) s
+5 155 M
+(                  distx=fabs\(xi[i]-xx[k]\);) s
+5 144 M
+(                  /*  mexPrintf\(" %g  ",distx\); */ ) s
+5 133 M
+(                  disty=fabs\(yi[j]-yy[k]\);) s
+5 122 M
+(                  /*   mexPrintf\(" %g  ",disty\); */) s
+5 111 M
+(                  if \(distx>\(Lx/2\)\){) s
+5 100 M
+(                    mexPrintf\("dx = %g, Lx = %g",distx,Lx\);) s
+5 89 M
+(                  }) s
+5 78 M
+(                  if \(disty>\(Ly/2\)\){) s
+5 67 M
+(                    mexPrintf\("dy = %g, Ly = %g",disty,Ly\);) s
+5 56 M
+(                  }) s
+5 45 M
+(                  ) s
+5 34 M
+(                  resultr[M*i+j]+=zzr[k]/Lx/Ly*bessi0\(Bx*sqrt\(1-4*distx*distx/Lx/Lx\)\)*bessi0) s
+5 23 M
+(\(By*sqrt\(1-4*disty*disty/Ly/Ly\)\);) s
+_R
+S
+%%Page: (4) 4
+%%BeginPageSetup
+_S
+24 24 translate
+/pagenum 4 def
+/fname (ffmygrid.c) def
+/fdir () def
+/ftail (ffmygrid.c) def
+% User defined strings:
+/fmodstr (Wed Nov 07 12:17:38 2001) def
+/pagenumstr (4) def
+/user_header_p false def
+%%EndPageSetup
+do_header
+5 716 M
+(                  if\(flag\){) s
+5 705 M
+(                  resulti[M*i+j]+=zzi[k]/Lx/Ly*bessi0\(Bx*sqrt\(1-4*distx*distx/Lx/Lx\)\)*bessi0) s
+5 694 M
+(\(By*sqrt\(1-4*disty*disty/Ly/Ly\)\);) s
+5 683 M
+(                  }) s
+5 672 M
+(                  /*          weight[M*i+j]+=1/Lx/Ly*bessi0\(Bx*sqrt\(1-4*distx*distx/Lx/Lx\)\)*) s
+5 661 M
+(bessi0\(By*sqrt\(1-4*disty*disty/Ly/Ly\)\);) s
+5 650 M
+(                  if \(\(i=44\) && \(j=0\)\){) s
+5 639 M
+(                    mexPrintf\("dx = %g, dy = %g",distx, disty\);}*/) s
+5 628 M
+(              }) s
+5 617 M
+(          }) s
+5 606 M
+(   }) s
+5 584 M
+(   /*      for\(i=0;i<L;i++\){) s
+5 573 M
+(        for\(j=0;j<M;j++\){  ) s
+5 562 M
+(          if\(weight[M*i+j] >= 0.000001\){) s
+5 551 M
+(              resultr[M*i+j]=resultr[M*i+j]/weight[M*i+j];) s
+5 540 M
+(              resulti[M*i+j]=resulti[M*i+j]/weight[M*i+j]; ) s
+5 529 M
+(          }) s
+5 518 M
+(        }) s
+5 507 M
+(      }) s
+5 496 M
+(   */) s
+5 474 M
+(                    ) s
+5 463 M
+( }else{mexErrMsgTxt\("\\ninvalid kernel name"\);}) s
+5 441 M
+(mxFree\(opt\);) s
+5 430 M
+(}) s
+_R
+S
+%%Trailer
+%%Pages: 4
+%%DocumentNeededResources: font Courier-Bold Courier 
+%%EOF

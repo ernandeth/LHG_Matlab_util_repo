@@ -1,0 +1,46 @@
+acml/4.1.1-pgi(29):ERROR:151: Module 'acml/4.1.1-pgi' depends on one of the module(s) 'pgi/8.0'
+acml/4.1.1-pgi(29):ERROR:102: Tcl command execution failed: prereq pgi/8.0
+
+{??? Index exceeds matrix dimensions.
+
+Error in ==> dh at 7
+	  resp=squeeze(rs(1+int*(int~=slen),:)+rs(int,:))/2;
+
+Error in ==> countourxy at 9
+	     dx1=dh(rijk,ri1jk,rs,js,1);
+
+Error in ==> contoursourceterms at 14
+    Hsource(curlequation(i,j,k,0))=(-mu0/(4*pi))*countourxy(rs,js,i,j,k);
+
+Error in ==> oneshotcerry at 19
+Hsource=contoursourceterms(rs,Jvec);
+} 
+{??? Index exceeds matrix dimensions.
+
+Error in ==> dh at 7
+	  resp=squeeze(rs(1+int*(int~=slen),:)+rs(int,:))/2;
+
+Error in ==> countourxy at 9
+	     dx1=dh(rijk,ri1jk,rs,js,1);
+
+Error in ==> contoursourceterms at 14
+    Hsource(curlequation(i,j,k,0))=(-mu0/(4*pi))*countourxy(rs,js,i,j,k);
+
+Error in ==> oneshotcerry at 19
+Hsource=contoursourceterms(rs,Jvec);
+} 
+{??? Index exceeds matrix dimensions.
+
+Error in ==> dh at 7
+	  resp=squeeze(rs(1+int*(int~=slen),:)+rs(int,:))/2;
+
+Error in ==> countourxy at 9
+	     dx1=dh(rijk,ri1jk,rs,js,1);
+
+Error in ==> contoursourceterms at 14
+    Hsource(curlequation(i,j,k,0))=(-mu0/(4*pi))*countourxy(rs,js,i,j,k);
+
+Error in ==> oneshotcerry at 19
+Hsource=contoursourceterms(rs,Jvec);
+} 
+

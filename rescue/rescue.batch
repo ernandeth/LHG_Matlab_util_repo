@@ -1,0 +1,9 @@
+#!/bin/tcsh -f
+
+# this is how you call the um-rescue program:
+#         um-rescue subject study start_run end_run
+
+um-rescue 020831js inhibition 1 4
+um-rescue 020831ld inhibition 1 4
+um-rescue 020915as inhibition 1 4
+um-rescue 020919rb inhibition 1 4

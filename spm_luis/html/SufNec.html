@@ -1,0 +1,553 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   
+      <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      -->
+      <title>SufNec</title>
+      <meta name="generator" content="MATLAB 7.7">
+      <meta name="date" content="2012-04-20">
+      <meta name="m-file" content="SufNec"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head>
+   <body>
+      <div class="content"><pre class="codeinput"><span class="keyword">function</span> SufNec
+
+option=2;
+
+<span class="keyword">switch</span>(option)
+    <span class="keyword">case</span> 1
+
+        <span class="comment">% do two nodes:</span>
+        a = zeros(1000,1);
+        b = zeros(1000,1);
+
+
+        a_inds = round(1000 * rand(20,1));
+
+        xtra = round(1000*rand (5,1));
+
+        a(a_inds) = 1;
+
+        b(a_inds) = 1;
+        a(xtra) = 1;
+
+        anoise = 0.1*randn(size(a));
+        bnoise = 0.1*randn(size(a));
+
+        a = a + anoise;
+        b = b + bnoise;
+        [Nab, Sab] = sufnec(a,b);
+
+
+    <span class="keyword">case</span> 2
+
+        <span class="comment">% do a five node network:</span>
+        X = Netsim;
+
+
+        Nmat = zeros(5,50);
+        Smat = zeros(5,50);
+
+        <span class="keyword">for</span> n=1:4
+            [Nab Sab] = sufnec(X(:,n),X(:,n+1) );
+            Nmat(n,:) = Nab;
+            Smat(n,:) = Sab;
+        <span class="keyword">end</span>
+
+        [Nab Sab] = sufnec(X(:,5),X(:,1) );
+
+        Nmat(5,:) = Nab;
+        Smat(5,:) = Sab;
+
+        figure(3)
+        subplot(211)
+        imagesc(Nmat); title(<span class="string">'Necessity'</span>)
+        colorbar
+        subplot(212)
+        imagesc(Smat); title(<span class="string">'Sufficiency'</span>)
+        colorbar
+<span class="keyword">end</span>
+Nmat(isnan(Nmat)) = 0;
+Smat(isnan(Smat)) = 0;
+
+Nintegral = sum(Nmat,2)
+Sintegral = sum(Smat,2)
+
+save <span class="string">DoSimVars</span>
+
+<span class="keyword">return</span>
+
+
+<span class="keyword">function</span> [Nab Sab] = sufnec(a,b)
+</pre><pre class="codeinput">Npts = 1000;
+doPlots = 0;
+
+<span class="comment">% scale the signal:</span>
+a = a /max(a); a=a-min(a);
+b = b/max(b); b=b-min(b);
+
+threshold =  linspace(0,7,50);
+stda = std(a);
+stdb = std(b);
+<span class="comment">%</span>
+<span class="comment">% stda = max(a)/100;</span>
+<span class="comment">% stdb = max(b)/100;</span>
+<span class="comment">%</span>
+
+MI = mutual_info(a,b);
+
+<span class="keyword">for</span> n = 1:length(threshold)
+
+    <span class="comment">% BInarization part:  simple thresholding</span>
+    atmp = zeros(Npts,1);
+    btmp = zeros(Npts,1);
+
+    th = threshold(n);
+
+    atmp(a&lt; th*stda) = 0;
+    atmp(a&gt;=th*stda) = 1;
+
+    btmp(b&lt; th*stdb) = 0;
+    btmp(b&gt;=th*stdb) = 1;
+
+
+    <span class="keyword">if</span> doPlots
+        figure(2)
+
+        subplot(211)
+        plot(a); hold <span class="string">on</span>,
+        line([0 Npts],[th*stda th*stda])
+        stem(atmp);   hold <span class="string">off</span>
+        title(<span class="string">'Node A'</span>)
+
+        subplot(212),
+        plot(b,<span class="string">'r'</span>);hold <span class="string">on</span>,
+        line([0 Npts],[th*stdb th*stdb])
+        stem(btmp,<span class="string">'r'</span>); hold <span class="string">off</span>
+        title(<span class="string">'Node B'</span>)
+    <span class="keyword">end</span>
+    Nab(n) =  ncsty(atmp,btmp);
+    Sab(n) =  sfcy(atmp,btmp);
+    Nab(n) = Nab(n) * MI;
+    Sab(n) = Sab(n) * MI;
+
+
+    <span class="comment">%pause(0.5)</span>
+<span class="keyword">end</span>
+
+
+figure(4)
+plot(threshold, Nab); hold <span class="string">on</span>;
+plot(threshold, Sab, <span class="string">'r'</span>); hold <span class="string">off</span>
+legend(<span class="string">'Necessity'</span>, <span class="string">'Sufficiency'</span>);
+xlabel(<span class="string">'Threshold (num. std. devs)'</span>)
+
+<span class="keyword">return</span>
+</pre><pre class="codeinput"><span class="keyword">function</span> N = ncsty(a,b)
+</pre><pre class="codeinput"><span class="comment">% Necessity = 1-P(B|~A);</span>
+<span class="comment">%  = P(~B | ~A)</span>
+
+p_ab = sum(a.*b)/length(a);
+
+p_bnota = sum( (~a) .*b ) / length(a) ;
+p_nota = sum(~a) / length(a);
+
+N =  1 - p_bnota / p_nota;
+
+<span class="comment">% N = N * p_ab;</span>
+<span class="comment">% N = N* (sum(a)+sum(b));</span>
+<span class="comment">% N = N* sum(a)/sum(a+b);</span>
+<span class="keyword">return</span>
+</pre><pre class="codeinput"><span class="keyword">function</span> S = sfcy(a,b)
+<span class="comment">% Sufficiency = P(B|A)</span>
+
+p_ab = sum(a .* b) / length(a);
+p_a = sum(a)/ length(a);
+
+S = p_ab / p_a;
+<span class="comment">% S = S* (sum(a)+sum(b));</span>
+<span class="comment">%S = S* sum(b)/sum(a+b);</span>
+
+<span class="keyword">return</span>
+</pre><pre class="codeinput"><span class="keyword">function</span> Result = Netsim
+Npts = 1000;
+
+X = zeros(Npts,5);
+u = zeros(Npts,5);
+
+<span class="comment">% define an external influence on one of the nodes:</span>
+inds = floor(linspace(1,Npts,50));
+u(inds,1) = 1;
+
+inds2 = floor(linspace(4,Npts-Npts/5,3));
+<span class="keyword">for</span> n=1:100
+    u(inds2 + n, 4) = 1;
+<span class="keyword">end</span>
+
+u = randn(Npts,5);
+u(u&lt;2.3) = 0;
+u(u&gt;0) = 1;
+<span class="comment">%u(:,2) = 0;</span>
+
+
+dt = ones(1,5);
+
+<span class="comment">% self-coefficient (decay)</span>
+A = -0.1 * ones(1,5);
+
+<span class="comment">% xternal influence coefficient</span>
+B =  ones(1,5);
+B(4)=0;             <span class="comment">% No external stimuli into 4.</span>
+                    <span class="comment">% This will make it so that node 3 is necessary for node 4</span>
+
+<span class="comment">% Direct influence coefficients - Sufficiency</span>
+C = zeros(5,5);
+<span class="comment">% for n=1:4</span>
+<span class="comment">%     C(n,n+1) = 0.5;</span>
+<span class="comment">% end</span>
+<span class="comment">% C(2,3) = 0;</span>
+C(1,2) = 0.3;  <span class="comment">% Node 1 is sufficient for node 2</span>
+C(3,4) = 0.3;  <span class="comment">% node 3 is sufficient for node 4</span>
+
+
+<span class="comment">% calculate the  changes in activity at each time step</span>
+<span class="keyword">for</span> n=2:Npts
+    dXdt = <span class="keyword">...</span>
+        X(n-1,:) .* A  +  <span class="keyword">...</span>
+        u(n,:) .*B  +  <span class="keyword">...</span>
+        X(n-1,:)* C;
+
+    X(n,:) = X(n-1,:) + dXdt .* dt ;
+<span class="keyword">end</span>
+
+X = X + 0.1*randn(size(X));
+
+Result = X;
+
+
+<span class="comment">% show the time courses on a nice plot:</span>
+<span class="keyword">for</span> n=1:5
+    X(:,n) = X(:,n) +10*n;
+<span class="keyword">end</span>
+figure(1)
+plot(X)
+<span class="keyword">return</span>
+</pre><pre class="codeoutput">
+Nintegral =
+
+   82.0829
+   61.7878
+   68.6821
+   61.0133
+   64.1646
+
+
+Sintegral =
+
+   28.1915
+   18.3280
+   26.3856
+   17.0905
+   25.2102
+
+</pre><img vspace="5" hspace="5" src="SufNec_01.png" alt=""> <img vspace="5" hspace="5" src="SufNec_02.png" alt=""> <p class="footer"><br>
+            Published with MATLAB&reg; 7.7<br></p>
+      </div>
+      <!--
+##### SOURCE BEGIN #####
+function SufNec
+
+option=2;
+
+switch(option)
+    case 1
+        
+        % do two nodes:
+        a = zeros(1000,1);
+        b = zeros(1000,1);
+        
+        
+        a_inds = round(1000 * rand(20,1));
+        
+        xtra = round(1000*rand (5,1));
+        
+        a(a_inds) = 1;
+        
+        b(a_inds) = 1;
+        a(xtra) = 1;
+        
+        anoise = 0.1*randn(size(a));
+        bnoise = 0.1*randn(size(a));
+        
+        a = a + anoise;
+        b = b + bnoise;
+        [Nab, Sab] = sufnec(a,b);
+        
+        
+    case 2
+        
+        % do a five node network:
+        X = Netsim;
+        
+        
+        Nmat = zeros(5,50);
+        Smat = zeros(5,50);
+        
+        for n=1:4
+            [Nab Sab] = sufnec(X(:,n),X(:,n+1) );
+            Nmat(n,:) = Nab;
+            Smat(n,:) = Sab;
+        end
+        
+        [Nab Sab] = sufnec(X(:,5),X(:,1) );
+        
+        Nmat(5,:) = Nab;
+        Smat(5,:) = Sab;
+        
+        figure(3)
+        subplot(211)
+        imagesc(Nmat); title('Necessity')
+        colorbar
+        subplot(212)
+        imagesc(Smat); title('Sufficiency')
+        colorbar
+end
+Nmat(isnan(Nmat)) = 0;
+Smat(isnan(Smat)) = 0;
+
+Nintegral = sum(Nmat,2)
+Sintegral = sum(Smat,2)
+
+save DoSimVars
+
+return
+
+
+function [Nab Sab] = sufnec(a,b)
+Npts = 1000;
+doPlots = 0;
+
+% scale the signal:
+a = a /max(a); a=a-min(a);
+b = b/max(b); b=b-min(b);
+
+threshold =  linspace(0,7,50);
+stda = std(a);
+stdb = std(b);
+%
+% stda = max(a)/100;
+% stdb = max(b)/100;
+%
+
+MI = mutual_info(a,b);
+
+for n = 1:length(threshold)
+    
+    % BInarization part:  simple thresholding
+    atmp = zeros(Npts,1);
+    btmp = zeros(Npts,1);
+    
+    th = threshold(n);
+    
+    atmp(a< th*stda) = 0;
+    atmp(a>=th*stda) = 1;
+    
+    btmp(b< th*stdb) = 0;
+    btmp(b>=th*stdb) = 1;
+    
+    
+    if doPlots
+        figure(2)
+        
+        subplot(211)
+        plot(a); hold on,
+        line([0 Npts],[th*stda th*stda])
+        stem(atmp);   hold off
+        title('Node A')
+        
+        subplot(212),
+        plot(b,'r');hold on,
+        line([0 Npts],[th*stdb th*stdb])
+        stem(btmp,'r'); hold off
+        title('Node B')
+    end
+    Nab(n) =  ncsty(atmp,btmp);
+    Sab(n) =  sfcy(atmp,btmp);
+    Nab(n) = Nab(n) * MI;
+    Sab(n) = Sab(n) * MI;
+    
+    
+    %pause(0.5)
+end
+
+
+figure(4)
+plot(threshold, Nab); hold on;
+plot(threshold, Sab, 'r'); hold off
+legend('Necessity', 'Sufficiency');
+xlabel('Threshold (num. std. devs)')
+
+return
+
+%%
+
+function N = ncsty(a,b)
+% Necessity = 1-P(B|~A);
+%  = P(~B | ~A)
+
+p_ab = sum(a.*b)/length(a);
+
+p_bnota = sum( (~a) .*b ) / length(a) ;
+p_nota = sum(~a) / length(a);
+
+N =  1 - p_bnota / p_nota;
+
+% N = N * p_ab;
+% N = N* (sum(a)+sum(b));
+% N = N* sum(a)/sum(a+b);
+return
+
+%%
+
+function S = sfcy(a,b)
+% Sufficiency = P(B|A)
+
+p_ab = sum(a .* b) / length(a);
+p_a = sum(a)/ length(a);
+
+S = p_ab / p_a;
+% S = S* (sum(a)+sum(b));
+%S = S* sum(b)/sum(a+b);
+
+return
+
+%%%
+function Result = Netsim
+Npts = 1000;
+
+X = zeros(Npts,5);
+u = zeros(Npts,5);
+
+% define an external influence on one of the nodes:
+inds = floor(linspace(1,Npts,50));
+u(inds,1) = 1;
+
+inds2 = floor(linspace(4,Npts-Npts/5,3));
+for n=1:100
+    u(inds2 + n, 4) = 1;
+end
+
+u = randn(Npts,5);
+u(u<2.3) = 0;
+u(u>0) = 1;
+%u(:,2) = 0;
+
+
+dt = ones(1,5);
+
+% self-coefficient (decay)
+A = -0.1 * ones(1,5);
+
+% xternal influence coefficient
+B =  ones(1,5);
+B(4)=0;             % No external stimuli into 4.
+                    % This will make it so that node 3 is necessary for node 4
+
+% Direct influence coefficients - Sufficiency
+C = zeros(5,5);
+% for n=1:4
+%     C(n,n+1) = 0.5;
+% end
+% C(2,3) = 0;
+C(1,2) = 0.3;  % Node 1 is sufficient for node 2
+C(3,4) = 0.3;  % node 3 is sufficient for node 4
+
+
+% calculate the  changes in activity at each time step
+for n=2:Npts
+    dXdt = ...
+        X(n-1,:) .* A  +  ...
+        u(n,:) .*B  +  ...
+        X(n-1,:)* C;
+    
+    X(n,:) = X(n-1,:) + dXdt .* dt ;
+end
+
+X = X + 0.1*randn(size(X));
+
+Result = X;
+
+
+% show the time courses on a nice plot:
+for n=1:5
+    X(:,n) = X(:,n) +10*n;
+end
+figure(1)
+plot(X)
+return
+%%%
+
+##### SOURCE END #####
+-->
+   </body>
+</html>
