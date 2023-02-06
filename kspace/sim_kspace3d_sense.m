@@ -13,7 +13,7 @@ function [signal b1map ] = sim_kspace3d_sense(kxs, kys, kzs)
 %
 
 %%
-MYDIM = 64;
+MYDIM = 65;
 Ncoils = 8;
 ks = [kxs, kys, kzs];
 Kmax = max(abs(ks(:)));
@@ -51,7 +51,8 @@ b1map(:,:,:,6) = 2 * b1map(:,:,:,6);
 
 % make a synthetic object
 im = phantom3d(MYDIM);
-im(52:60, 42:60, 42:60) = 2;
+%im(52:60, 42:60, 42:60) = 2;
+
 % using noise to give more texture to the image
 msk = ones(size(im));
 msk(im==0) = 0;

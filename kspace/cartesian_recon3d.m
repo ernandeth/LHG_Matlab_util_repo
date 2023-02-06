@@ -1,6 +1,6 @@
-function im = cartesian_recon3d(cart_data, dim, dens)
+function im = cartesian_recon3d(cart_data, dim, smaps)
 %
-% function im = cartesian_recon3d(cart_data, dim)
+% function im = cartesian_recon3d(cart_data, dim [,smaps])
 %
 % very simple 3D FFT of cartesian k-space data.
 % combines coils using the sum of squares
@@ -11,35 +11,51 @@ function im = cartesian_recon3d(cart_data, dim, dens)
 %
 
 im=zeros(dim);
+Ncoils = size(cart_data,2);
+alldims = [dim Ncoils];
 if nargin==3
-    fprintf('using density compensation')
-    dens =reshape(dens, dim).^0.9;
+    fprintf('\nCartesian Recon using using sensitivity maps\n')
+    % scaling factor:  sum of the sensitivity maps
+    SM = sum( abs(smaps).^2, 4) ;
+    SM(isinf(SM)) = 0;
+    SM(isnan(SM)) = 0;
+    
+% code from recon3dflex
+%     im = div0( sum( conj(args.smap) .* im, 4), ...
+%            sum( abs(args.smap).^2, 4) );
+%     im = im .* (sum(abs(args.smap),4) > args.tol);
+        
+
 else
-    dens = ones(dim);
+    smaps = ones(alldims);
+    SM = 1;
 end
 
 for c=1:size(cart_data,2)
-    tmp = reshape(cart_data(:,c), dim) ./ dens;
+    tmp = reshape(cart_data(:,c), dim);
     tmp(isnan(tmp)) = 0;
-    
-    figure
-%    ov([],log(abs(tmp)), round(dim(1)/2), round(dim(2)/2),round(dim(3)/2),0); 
-    subplot(211)
-    lightbox(log(abs(tmp(:,:,1:3:end))));
-%     
-     tmp = fftshift(ifftn(tmp));
-    subplot(212)
-    lightbox((abs(tmp(:,:,1:3:end))));
-    colormap parula
-    
+
+    tmp = fftshift(fftn(tmp));
+    tmp = permute(tmp,[2 1 3]);
+
     % add the squares of the coil images
-    im = im + tmp.^2;
-    drawnow
-    pause(0.5)
+    if nargin< 3
+        im = im + tmp.^2;
+    else
+        tmp = tmp .* conj(smaps(:,:,:,c));
+        im = im +tmp;
+    end
+
 end
 
-figure
-im = abs(sqrt(im));
-%ov([],im, round(dim(1)/2), round(dim(2)/2),round(dim(3)/2),0); 
-lightbox(im);
+if nargin< 3
+    im = abs(sqrt(im));
+end
+% remove voxels where sensitivity is too low
+im(SM<1e-3) = 0;
+im = im ./ SM;
+        
+%figure
+% ov([],im, round(dim(1)/2), round(dim(2)/2),round(dim(3)/2),0); 
+% lightbox(abs(im));
 return
