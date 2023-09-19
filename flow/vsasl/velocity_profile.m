@@ -20,7 +20,7 @@ Vmax_range = linspace(0,10,500);
 m1 = sum(t .* abs(Gz))*sampTime;
 
 gz=load('pulses/myVSI_6850.grad.txt');
-gz = 1*gz(1:6000)/max(gz);
+gz = 3 * gz(1:6000)/max(gz);
 gz = gz';
 % to get a cutoff near 1 cm/s you need about 2 G/cm Gmax
 m1 = sum(t(1:6000) .* abs(gz))*sampTime;

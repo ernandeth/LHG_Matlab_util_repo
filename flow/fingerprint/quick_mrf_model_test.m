@@ -1,8 +1,7 @@
-function result= quick_mrf_sensitivity(timing_parms)
-% function result= quick_mrf_sensitivity(timing_parms)
+function result= quick_mrf_model_test(timing_parms)
+% function result= quick_mrf_model_test(timing_parms)
 %
-% Now test the schedule's sensitivity by varying one parameter at a tim
-% we cut them in half.
+% compares two gen_signals models ata time
 %
 
 parms.Mtis0 =     1 ;
@@ -18,7 +17,7 @@ parms.r2tis=    1/0.090;
 parms.b1err = 0;
 
 doSub = 0;
-
+%{
 for n=1:5
     parms2 = parms;
     switch(n)
@@ -39,7 +38,7 @@ for n=1:5
             parms2.r2tis = parms.r2tis/2;
     end
     
-    
+%}  
         %gen_signals_vs_220421(parms, ...
         %gen_signals_vs_230321(parms, ...
 
@@ -51,7 +50,7 @@ for n=1:5
         %gen_signals_vs_220421(parms2,...
         %gen_signals_vs_230321(parms2,...
     test_signal2 = abs(single(...
-        gen_signals_vs_230718(parms2, ...
+        gen_signals_vs_230918(parms, ...
         timing_parms,...
         0,doSub, 1e-3))); 
     
@@ -60,34 +59,23 @@ for n=1:5
     
     rms = mean(abs((test_signal-test_signal2)./(test_signal))) ;
     
-  
-    subplot(5,2,2*n-1)
+      
+    subplot(2,1,1)
     plot(test_signal); hold on;
     plot(test_signal2); hold off
-    title(str)
-    
-    subplot(5,2,2*n)
+    title('raw signals')
+
+    subplot(2,1,2)
     plot( (test_signal-test_signal2)/norm(test_signal) )
     title(sprintf('NRMS change  : %0.2e',...
         rms));
-    
-    switch(n)
-        case 1
-            result.df = rms;        
-        case 2
-            result.dcbva = rms;
-        case 3
-            result.bat = rms;        
-        case 4
-            result.r1tis = rms;
-        case 5
-            result.r2tis = rms;
-    end
    
     total_duration = ...
         sum(timing_parms.del1(:)) ...
         + sum(timing_parms.del2(:)) ...
         + sum(timing_parms.del3(:))...
         + sum(timing_parms.RO_time(:))
+
+    result = [test_signal; test_signal2];
 end 
     

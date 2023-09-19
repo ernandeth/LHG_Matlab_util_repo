@@ -1,6 +1,9 @@
 %close all
 % figure(1)
 
+batch_mode = 0;
+exportPulses = 0;
+
 % simulation step size in milliseconds.
 % 1 usec per step. (or 0.001 msec)
 dt = 1e-3;
@@ -15,10 +18,7 @@ T2 = 165;   %ms  from Qin paper
 
 homogeneity = 'perfect'; % 'perfect'  % 'bad_B0_B1'
 refocus_scheme = 'MLEV'; % 'MLEV' % 'DR180'
-base_pulse =  'sinc_mod_90' % 'sinc_mod'   % 'sinc'  % 'hard'; % sech, hard, BIR 'hard_90'
-
-batch_mode = 0;
-exportPulses = 1;
+base_pulse =  'sinc_mod_90'; % 'sinc_mod'   % 'sinc'  % 'hard'; % sech, hard, BIR 'hard_90'
 
 if batch_mode
     homogeneity ='';
@@ -57,9 +57,9 @@ Gvs =   1.4*1e-4;  % T/cm   % 16900 and 17268
 %Gvs =   3*1e-4;  % T/cm     % 12360
 Gvs = 2*1e-4;  % 17846 for cutoff 1.1
 Gvs = 2.25e-4;
-
+Gvs = 3.5e-4;
 % experimental new pulse
-%Gvs = 1.2 * 1e-4;
+Gvs = 1.5 * 1e-4;
 %Nsegs = 17;
 
 gap = round(0.4/dt);
@@ -120,8 +120,8 @@ switch base_pulse
 %        mySinc_dur = 3.6; % ms - 17268 pulse (9 x 0.4) 
 
         mySinc_dur = round(mySinc_dur/dt/Nsegs) * Nsegs*dt; % ms
-        mySinc = sinc(linspace(-0.5, 0.5,  mySinc_dur/dt))' ;
-        %mySinc = mySinc .* hanning(length(mySinc));  % 17268 pulse
+        mySinc = sinc(linspace(-0.9, 0.9,  mySinc_dur/dt))' ;
+        %mySinc = mySinc .* hanning(length(mySinc));  % 
         mySinc_area = (sum(mySinc) * dt);
         mySinc =  B1_area180 * mySinc / mySinc_area;
         mySinc = mySinc* 0.52; % doing a 93.6 degree pulse only.
@@ -184,13 +184,13 @@ B1ref_dur = 1.0;   % ms   - 17268 abd 17536
 
 B1ref_len = B1ref_dur/dt;  % points
 B1ref_max = (1/B1ref_dur)* 0.1175e-4; % Tesla ... amplitude of 1 ms hard 180
-B1ref = B1ref_max * ones(B1ref_len,1) ; % * exp(i*pi/2);
+B1ref = B1ref_max * ones(B1ref_len,1);
+%B1ref = B1ref* exp(i*pi/2);
 B1ref_area = sum(abs(B1ref));
 
 % make Refocuser 180 be a composite pulse (90x-180y-90x)
 tmp90 = B1ref(1:end/2);  % Jia's version of the 17268 uses 
-                         %  B1ref(1:(end/2-1))
-% the whole composite pulse:                         
+                        %  B1ref(1:(end/2-1))
 B1ref = [tmp90; B1ref*exp(i*pi/2); tmp90]; %  16900 and 17268
 
 % Now shorten the pulses and make them taller
@@ -313,7 +313,11 @@ end
 if exportPulses
 % write pulses to put on the scanner
     genScannerPulses(B1, Gz, dt);
+    convert_VSI2prep_pulses(length(B1)/4)
 end
+
+% get a little bit more tip!
+B1 = B1 *1.02;
 
 Bx = real(B1);
 By = imag(B1);
@@ -324,7 +328,7 @@ NSTEPS = length(B1);
 % total duration of the simulation interval (in ms)
 duration = NSTEPS*dt;  % ms.
 vel_range =[-100:100]*1e-3;
-vel_range = linspace(0, 50, 500) * 1e-3;
+vel_range = linspace(0, 50, 100) * 1e-3;
 
 for vel = vel_range  % cm / msec
     
@@ -417,6 +421,7 @@ c_ind = find(delta > max(delta)*0.5);
 Vcutoff_FTVS = vel_range(c_ind(1))*1e3
 
 fprintf('\nOfficial Vcut (half point of efficiency point) for FTVS is %f', Vcutoff_FTVS);
+GAMMA = 2*pi*4.257e3; % rad/s/gauss
 
 %{
 Gvenc = 0.3*1e2; % Gauss/m

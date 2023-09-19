@@ -1,13 +1,15 @@
 function make_schedule_files(timing_parms, dirName)
 % function make_schedule_files(timing_parms, dirName)
 
-t_tag           = timing_parms.t_tag;
-t_delay         = timing_parms.t_delay;
-t_adjust        = timing_parms.t_adjusts ;
+t_tag           = timing_parms.del1;
+t_tag(:) = 0;
+
+t_delay         = timing_parms.del2;
+t_adjust        = timing_parms.del1 ;
 isLabel         = timing_parms.labelcontrol ;
 order           = timing_parms.order;
 t_aq            = timing_parms.t_aq ;
-AS_delay        = timing_parms.ArtSup_delay;
+AS_delay        = timing_parms.del3;
 doAS            = timing_parms.doArtSup;
 RO_type         = timing_parms.readout_type;
 label_type      = timing_parms.label_type;
@@ -17,19 +19,19 @@ Nframes = length(t_delay)
 figure(1)
 
 subplot(321)
-plot(timing_parms.t_adjusts); title('pre label delay')
+plot(timing_parms.del1); title('Delay 1')
 axis tight
 
 subplot(322)
-plot(timing_parms.t_delay); title('post label delay')
+plot(timing_parms.del2); title('Delay 2')
 axis tight
 
 subplot(323)
-plot(timing_parms.ArtSup_delay); title('AS delay')
+plot(timing_parms.del3); title('Delay 3')
 axis tight
 
 subplot(324)
-plot(timing_parms.t_tag); title('Label Duration')
+plot(t_tag); title('Label Duration')
 axis tight
 
 subplot(325)

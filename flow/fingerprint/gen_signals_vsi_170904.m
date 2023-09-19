@@ -27,13 +27,13 @@ if nargin==0
     Disp =      40;
     TR = 4;
     
-    Nframes = 10;
+    Nframes = 4;
     aqwindow = aqwindow * ones(Nframes, 1);
     % timing for straight up  VSASL :
-    t_delay  = 0.35 * ones(Nframes,1);            % time between arterial crusher and acquisition
-    t_tag = 1.5*ones(Nframes,1);                  % time between label pulse and arterial crusher
+    t_delay  = 2.5 * ones(Nframes,1);            % time between arterial crusher and acquisition
+    t_tag = 2.5*ones(Nframes,1);                  % time between label pulse and arterial crusher
     t_adjust = 1.5*ones(Nframes,1) - aqwindow;    % time between acquisition and label pulse
-    t_tag = 1.5*randn(Nframes,1);                 % time between label pulse and arterial crusher
+    %t_tag = 1.5*randn(Nframes,1);                 % time between label pulse and arterial crusher
     
     order = 1;  % control-tag
     Nlabel_group = 1;  % Number of tags in a row  (added this on 5/7/15)

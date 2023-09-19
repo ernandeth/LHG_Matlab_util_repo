@@ -352,7 +352,7 @@ if batch_mode==0
     plot(vel_range*1e3, Mzfinal)
     plot(vel_range*1e3, Mzfinal_ns)
     axis([min(vel_range)*1e3 max(vel_range)*1e3, -1 1])
-    fatlines
+%    fatlines
     grid on
     xlabel('Velocity (cm/s)')
     ylabel('M_z')

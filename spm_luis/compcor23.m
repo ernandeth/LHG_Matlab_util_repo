@@ -1,15 +1,15 @@
-function [clean junkcomps] = compcor12(dirty, hdr, Ncomps, X)
-% function [clean junkcomps] = compcor12(dirty, hdr [,Ncomps] [,DesMat])
+function [clean junkcomps] = compcor23(dirty, Ncomps, X)
+% function [clean junkcomps] = compcor12(dirty, [,Ncomps] [,DesMat])
 %
-% written by Luis Hernandez-Garcia at UM (c) 2012
+% written by Luis Hernandez-Garcia at UM (c) 2023
 %
 % the dirty input data should be a matrix : Tframes by Npixels
 % The hdr is just to let us know the dimensions of the images
 %
 % sample usage:
-%   [dirty hdr] = read_img('dirtyFiles.img');
-%   [clean junkcoms] = compcor12(dirty, hdr);
-%   write_img('cleanFile.img', clean, hdr);
+%   [dirty hdr] = readnii('dirtyFiles.nii');
+%   [clean junkcoms] = compcor23(dirty);
+%   writenii('cleanFile.nii', clean, 'hdr', hdr);
 %
 % Preferred method: you can put the junkcomps into the
 % design matrix of a GLM.  In that case, it may be good
@@ -28,13 +28,13 @@ end
 showFigs=0;
 
 TopPercentSigma = 30;
-TopPercentSigma = 10;
+%TopPercentSigma = 10;
 
 fprintf('\nFinding the top %d components in the noisiest pixels \n(pixels with top %d percent of the variance)\n...',Ncomps, TopPercentSigma)
-
-if isfield(hdr,'originator')
-    hdr=nii2avw_hdr(hdr);
-end
+dims = size(dirty);
+Npix = dims(1)*dims(2)*dims(3);
+Nframes = dims(4);
+dirty = reshape(dirty,Npix, Nframes)';
 
 sigma = std(dirty,1);
 msk = ccvarmask(sigma, TopPercentSigma);
@@ -43,10 +43,10 @@ msk = ccvarmask(sigma, TopPercentSigma);
 if(showFigs)
     figure;
     subplot(211)
-    lightbox(reshape(sigma,hdr.xdim, hdr.ydim, hdr.zdim));
+    lightbox(reshape(sigma,dims(1), dims(2), dims(3)));
     title('std. dev. map')
     subplot(212)
-    lightbox(reshape(msk,hdr.xdim, hdr.ydim, hdr.zdim));
+    lightbox(reshape(msk,dims(1), dims(2), dims(3)));
     title('pixels for compcor');
     set(gcf,'Name', 'Compcor Uses the Noisiest voxels')
 end
@@ -55,7 +55,7 @@ mdirty = dirty .* repmat(msk, size(dirty,1),1);
 mdirty(isinf(mdirty))=0;
 mdirty(isnan(mdirty))=0;
 
-[u, s,v]=svd(mdirty',0);
+[u, s,v]=svd(mdirty','econ');
 
 junkcomps = v(:,1:Ncomps);
 
@@ -107,19 +107,23 @@ BIC = n*log(RSS/n) + k*log(n);
 BIC = BIC .*msk;
 BIC(BIC==0) = nan;
 
+% reshape the output to its original shape
+clean = clean';
+clean=reshape(clean, dims(1), dims(2), dims(3), dims(4));
+
+
 if (showFigs)
     subplot(224)
-    lightbox(reshape(BIC,hdr.xdim, hdr.ydim, hdr.zdim));
     title('BIC at each voxel');
     subplot(223)
     hist(BIC(:),50); title(sprintf('BIC histogram. Mean %f', mean(BIC(~isnan(BIC)))));
 
     figure;
     subplot(211)
-    lightbox(reshape(sigma,hdr.xdim, hdr.ydim, hdr.zdim));
+    lightbox(reshape(sigma,dims(1), dims(2), dims(3)));
     title('std. dev. map BEFORE')
     subplot(212)
-    lightbox(reshape(cc_sigma,hdr.xdim, hdr.ydim, hdr.zdim));
+    lightbox(reshape(cc_sigma,dims(1), dims(2), dims(3)));
     title('std. dev. map AFTER');
     set(gcf,'Name', 'Compcor Reduction in Noise')
 end

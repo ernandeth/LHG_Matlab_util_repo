@@ -1,27 +1,37 @@
+function [parms phys_parms] = read_timing_files(myDir)
+% function parms = read_timing_files(myDir)
+%
+% read acquisition parameter files for Velocity Selective ASL
+% Fingerprinting time series experiment
+% 
+curDir = pwd;
+cd(myDir)
+
+parms.t_tags =      load('t_tags.txt');
+parms.del1 =        load('t_adjusts.txt');
+parms.del2 =        load('t_delays.txt');
+parms.del3 =        load('AS_delays.txt'); % delay between AS pulse and acqusition
+parms.labelcontrol= load('isVelocitySelective.txt');
+parms.doArtSup =    load('doArtSuppression.txt');
+parms.order =       load('order.txt');
+parms.RO_time=      load('RO_time.txt');    
 
 
-labelcontrol =  load('labelcontrol.txt');
-t_tag = load('t_tags.txt');
-t_delay = load('t_delays.txt');
-t_adjust = load('t_adjusts.txt');
+parms.t_aq =        load('RO_time.txt');%load('t_aqs.txt');
+% hard code these:
+parms.RO_type =     char(load('RO_type.txt'));
+parms.label_type =  'BIR8inv'; % load('LabelType.txt');
 
-if exist(fullfile(pwd,'t_aqs.txt'))
-    t_aq = load('t_aqs.txt');
-else
-    t_aq = 0.0349*ones(size(t_tag));
-end
+% some nice defaults for simulation
+    phys_parms.f = 0.01;
+    phys_parms.Mtis0 = 1;
+    phys_parms.cbva = 0.02;
+    phys_parms.bat =  0.07;
+    phys_parms.r1tis =  1/1.3;
+    phys_parms.flip =  pi;
+    phys_parms.r2tis = 1/0.090;
 
-tr = t_tag+t_delay+t_adjust +t_aq;
-sum(tr)
-plot(tr)
+    total_dutaion = sum(parms.del1 + parms.del2 + parms.del3 +parms.RO_time+parms.t_tags)
 
-
-    timing_parms.order = 1;
-    timing_parms.Nlabel_group = 1;
-
-    timing_parms.t_tag = t_tag;
-    timing_parms.t_delay = t_delay;
-    timing_parms.t_adjust = t_adjust;
-    timing_parms.isLabel = labelcontrol;
-    timing_parms.t_aq = t_aq;
-    
+cd(curDir)
+return

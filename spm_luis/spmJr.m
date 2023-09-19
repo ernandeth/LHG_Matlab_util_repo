@@ -161,8 +161,8 @@ if ~isempty(h)
         outh.tdim = 1;
         outh.datatype=16;
         outh.bits = 32;
-        outh.glmax = max(tmap(n,:));
-        outh.glmin = min(tmap(n,:));
+        %outh.glmax = max(tmap(n,:));
+        %outh.glmin = min(tmap(n,:));
 
         write_hdr( sprintf('Tmap_%04d.hdr', n), outh);
         write_img_data( sprintf('Tmap_%04d.img',n), tmap(n,:), outh);
@@ -170,18 +170,18 @@ if ~isempty(h)
         write_hdr( sprintf('log10P_%04d.hdr',n), outh);
         write_img_data( sprintf('log10P_%04d.img',n), -log10(pvals(n,:)), outh);
 
-        outh.glmax = max(vCon(n,:));
-        outh.glmin = min(vCon(n,:));
+        %outh.glmax = max(vCon(n,:));
+        %outh.glmin = min(vCon(n,:));
         write_hdr( sprintf('ConVar_%04d.hdr', n), outh);
         write_img_data( sprintf('ConVar_%04d.img',n), vCon(n,:), outh);
 
-        outh.glmax = max(zmap(n,:));
-        outh.glmin = min(zmap(n,:));
+        %outh.glmax = max(zmap(n,:));
+        %outh.glmin = min(zmap(n,:));
         write_hdr( sprintf('Zmap_%04d.hdr',n), outh);
         write_img_data( sprintf('Zmap_%04d.img',n), zmap(n,:), outh);
 
-		outh.glmax = max(betaCon(n,:));
-        outh.glmin = min(betaCon(n,:));
+		%outh.glmax = max(betaCon(n,:));
+        %outh.glmin = min(betaCon(n,:));
         write_hdr( sprintf('ConBhat_%04d.hdr',n), outh);
 		write_img_data( sprintf('ConBhat_%04d.img',n), betaCon(n,:), outh);
 	

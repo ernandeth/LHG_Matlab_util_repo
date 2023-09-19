@@ -5,8 +5,8 @@ if length(Ncomps)>1;
     r1_array = 1./Ncomps
     Ncomps = length(Ncomps);
 else
-    r1_array = linspace(3,0.25,Ncomps);
-    r2_array = linspace(60,3,Ncomps);
+    r1_array = linspace(3,0.3,Ncomps);
+    r2_array = linspace(25,4,Ncomps);
 end
 
 if nargin<2
@@ -44,7 +44,7 @@ tcomp_init = rand(hdr.tdim, Ncomps);
 parms.f         = 50/6000;
 parms.Mtis0     = 1;
 parms. cbva     = 0.02;
-parms.bat       = 0.1;
+parms.bat       = 0.35;
 parms.r1tis     = 1/1.4;
 parms.r2tis     = 1/0.05;
 parms.flip      = deg2rad(90);
@@ -76,13 +76,12 @@ aq_parms.order=1;
 for n=1:Ncomps
     parms.r1tis = r1_array(n);
     %obs = gen_signals_vs_201020(parms, aq_parms, 0,0);
-    parms.r2tis =  r2_array(n);
+    parms.r2tis = r2_array(n);
     obs = gen_signals_vs_230321(parms, aq_parms, 0,0);
     
     % use a random time course to seed the components
     tcomp_init(:,n) = obs';
-    tcomp_init(:,n) = tcomp_init(:,n) - mean(tcomp_init(:,n));
-    tcomp_init(:,n) = tcomp_init(:,n) / norm(tcomp_init(:,n));
+    tcomp_init = tcomp_init(:,c) - mean(tcomp_init(:,n));
 
     %tcomp_init = randn(size(tcomp_init));
    
@@ -116,21 +115,17 @@ for m=1:NITER
             for c=1:Ncomps
                 tmp = tcomponents(:, c) / norm(tcomponents(:,c));
                 innerprod(c) = tmp' * tmp2;
-                %cc=corrcoef(tmp,tmp2);
-                %innerprod(c) = cc(1,2);
-
             end            
             [junk cmax] = max(innerprod);
-            if junk>1e-2
-                % assign this pixel to a class (corresponds to one of seed timecourse)
-                class(p) = cmax;
+            
+            % assign this pixel to a class (corresponds to one of seed timecourse)
+            class(p) = cmax;
 
-                % update the components:
-                % add timecourse to best candidate seed:
-                tcomponents(:, cmax) =   tcomponents(:, cmax) +  tmp2;
-                % normalize the seed
-                tcomponents(:, cmax) =   tcomponents(:, cmax) /norm(tcomponents(:,cmax));
-            end
+            % update the components:
+            % add timecourse to best candidate seed:
+            tcomponents(:, cmax) =   tcomponents(:, cmax) +  tmp2;
+            % normalize the seed
+            tcomponents(:, cmax) =   tcomponents(:, cmax) /norm(tcomponents(:,cmax)); 
         end
     end
 

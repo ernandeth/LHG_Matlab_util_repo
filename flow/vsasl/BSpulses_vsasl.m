@@ -7,9 +7,9 @@ R1csf = 1/3;
 
 dt=1e-3;
 
-TR = 4.5
+TR = 3
 RO_time = 0.6;
-t_delay = 1.4;
+t_delay = 1.7;
 
 t_adjust = TR - RO_time-t_delay;
 
@@ -28,10 +28,12 @@ if do7t
 end
 
 
-%BS1_time= linspace(0.1, t_delay-0.1, 8) ;
-BS1_time = 0.1;
+BS1_time= linspace(0.1, t_delay-0.1, 8) ;
+BS1_time = 1.17;
 
-BS2_time = 0.25;
+BS2_time = 1.3 - BS1_time;
+BS2_time = BS2_time(find(BS2_time>0));
+BS2_time = 0.55;
 
 AQtime = 1e3*(t_adjust + t_delay);
 
@@ -96,6 +98,7 @@ for n1 = 1:length(BS1_time)
             end
             
             % BGS inversion pulse 2 applied to the whole brain and the artery
+          %
             if n == c
                 mcsf(n) = -mcsf(n);
                 mcsft(n) = -mcsft(n);
@@ -103,7 +106,7 @@ for n1 = 1:length(BS1_time)
                 ma(n) = -ma(n);
                 mat(n) = -mat(n);
             end
-            
+          %}          
         end
         
         figure(1)
@@ -132,14 +135,23 @@ for n1 = 1:length(BS1_time)
 end
 
   %
-% figure
-% subplot(211)
-% imagesc(asl); title('ASL signal'); colorbar
-% ylabel('Transit Time')
-% xlabel('in1erpulse BS2_time')
-%
-% subplot(212)
-% imagesc(abs(bkgnd)); title('Bcknd Signal'); colorbar
-% ylabel('Transit Time')
-% xlabel('in1erpulse BS2_time')
-% legend('ASL signal','tissue')
+  if length(BS1_time) > 1
+figure
+subplot(311)
+imagesc(asl); title('ASL signal'); colorbar
+ylabel('Transit Time')
+xlabel('in1erpulse BS2_time')
+
+subplot(312)
+imagesc(abs(bkgnd)); title('GM Signal'); colorbar
+ylabel('BS1_time')
+xlabel(' BS2_time')
+legend('ASL signal','tissue')
+
+
+subplot(313)
+imagesc(abs(bkgnd2)); title('CSF Signal'); colorbar
+ylabel('BS1_time')
+xlabel('BS2_time')
+legend('ASL signal','tissue')
+  end
