@@ -42,7 +42,6 @@ parms.r2tis =     11 ;
 
 parms.b1err =   0.0;
 
-
 if nargin==0
     % Set pulse sequence parameters
     Nframes = 20;
@@ -59,12 +58,15 @@ if nargin==0
     aq_parms.doArtSup(1)=    0;
     aq_parms.t_aq = 0.750 ;  % duration of the whole readout
 
+    aq_parms.Ma = [];
+
     % generate test data
     doSub = 0;
     dofigs = 0;
     %data = gen_signals_vs_230718(parms, aq_parms, dofigs,doSub);
-    data = gen_signals_vs_230918(parms, aq_parms, dofigs,doSub);
-
+    [data Mart]= gen_signals_vs_230918(parms, aq_parms, dofigs,doSub);
+    aq_parms.Ma = Mart;
+    
     timeseries = data + 0.01*randn(size(data));
     showFit = 1;
 
@@ -139,6 +141,7 @@ b1err = guess(3);
 parms.r1tis = r1tis;
 parms.r2tis = r2tis;
 parms.b1err = b1err;
+
 
 %synthdata = gen_signals_vs_230718(parms, aqparms, 0, 0);
 synthdata = gen_signals_vs_230918(parms, aqparms, 0, 0);

@@ -1,5 +1,5 @@
-function [allCoilNets  network_corr] = makeGrappaNet (kx, ky, kz, data, dim3, CalRadius)
-% function allCoilNets = makeGrappaNet (kx, ky, kz, data, dim3, CalRadius)
+function [allCoilNets  network_corr] = makeGrappaNet (kx, ky, kz, data, dim3, CalFraction)
+% function allCoilNets = makeGrappaNet (kx, ky, kz, data, dim3, CalFraction)
 %
 % (C) Luis Hernandez-Garcia @ University of Michigan
 % hernan@umich.edu
@@ -11,13 +11,16 @@ function [allCoilNets  network_corr] = makeGrappaNet (kx, ky, kz, data, dim3, Ca
 % kx, ky, kz is the trajectory in k-space (cm*-1)
 % data is the signal : (Npoints_echo*Nechoes) x Ncoils
 % dim3 is num. pixels in each dimension of IMAGE space
-% CalRadius is the fraction of k space used for calibration region
+% CalFraction is the fraction of k space used for calibration region
 %
 % OUTPUT:
 % returns a cell array.  Each cell is a network for each coi.
 % 
 %
 
+% 
+% Skipping this section and reading whatever was saved in the
+% workspace.mat :
 
 % figure out how many coisl are present
 Ncoils = size(data,2);
@@ -25,18 +28,18 @@ Ncoils = size(data,2);
 % STEP 1: Set up a calibration region
 % Determine a center region for calibration, assuming that this
 % center region is well sampled.
-% the calibration region is determined by CalRadius relative to the Rmax
+% the calibration region is determined by CalFraction relative to the Rmax
 R = sqrt(kx.^2 + ky.^2 + kz.^2);
 Kmax = max(R);
-CalRegion = find(R < CalRadius*Kmax);   % Find the points that belong in the calibration region (center)
-dkx = 2*Kmax/dim3(1);    % size of k-space voxels: 
+CalRegion = find(R < CalFraction*Kmax);   % Find the points that belong in the calibration region (center)
+
+dkx = Kmax/dim3(1);    % size of k-space voxels: 
                          %  (1/FOV) (distance between neighbors in the iso-tropic cartesian grid)
-CalRegion_dim = floor(dim3*CalRadius);  % size of cartesian calibration data matrix   
 
 %  Upsample:  Double the resolution in the calibration region - 
 %  --> more voxels in cal region
-CalRegion_dim = 2*CalRegion_dim;
-dkx = dkx/2;  
+% CalRegion_dim = 2*CalRegion_dim;
+% dkx = dkx/2;  
 
 
 fprintf('\rGRIDDING: Making cartesian calibration data from non cartesian data...\n')
@@ -45,12 +48,16 @@ fprintf('\rGRIDDING: Making cartesian calibration data from non cartesian data..
 % we have to do this for each coil
 cal_grid = [];
 dcf = [];
+sampFactor = 1
 % create the mesh for interpolation
-CalRadius = CalRadius * Kmax;    % convert from fraction to k space units.
+CalKmax = CalFraction * Kmax;    % convert from fraction to k space units.
+CalRegion_dim = sampFactor* floor(dim3*CalFraction);  % size of cartesian calibration data matrix   
+dkx = dkx/sampFactor;  
+
 [subkx , subky, subkz ]= meshgrid( ...
-    linspace(-CalRadius,CalRadius,CalRegion_dim(1)), ...
-    linspace(-CalRadius,CalRadius,CalRegion_dim(2)), ...
-    linspace(-CalRadius,CalRadius,CalRegion_dim(3)));
+    linspace(-CalKmax,CalKmax,CalRegion_dim(1)), ...
+    linspace(-CalKmax,CalKmax,CalRegion_dim(2)), ...
+    linspace(-CalKmax,CalKmax,CalRegion_dim(3)));
 im = zeros(size(subkx));
 
 % Make a Gaussian filter in k-space.  WIll use this for 
@@ -104,21 +111,26 @@ for coilnum=1:Ncoils
     cal_grid = [cal_grid tmp(:)];
 end
 clear tmp
+% create a calibration region from the original data
+% it will consist of the center fraction (CalFraction) of the sampled data
+% and it will be on a cartesian grid.
+%
+% We will sampFactor the k-space calibration region - 
+%  --> more voxels in cal region
 %{
-% testing the reconned images
-figure(37)
-fk = fk- min(fk(:));
-fk = fk/max(fk(:));
-im_all = sqrt(im)./(0.01+fk);
-lightbox(im_all(10:end-10, 10:end-10, 20:end-20));
-title('Final Corrected Image');
+sampFactor = 2;
+CalRegion_dim = sampFactor*CalRegion_dim;
+dkx = dkx/sampFactor;  
+
+cal_grid = grid2cartesian(kx, ky, kz, data, dim3*sampFactor, CalFraction);
 %}
 
-
-save workspace.mat
+%save workspace.mat
 
 % in case we want to skip this ....
 %}
+
+%} end the gridding sction
 
 %%
 % CREATE TRAINING DATA
@@ -126,7 +138,7 @@ save workspace.mat
 
 % a known TARGET
 fprintf('\nConstructing patches within calibration region ...\n ');
-load workspace.mat
+%load workspace.mat
 
 doRandomNeighbors = 1;
      
@@ -134,10 +146,10 @@ doRandomNeighbors = 1;
 % in each patch.  a patch is a constellation of points in
 % kspace arround a location that we want to interpolate.
 %Nnbrs = 35;  <--------LHG 11.17.22 - this worked for the digital phantom
-%Nnbrs = 15;
 Nnbrs = 7;
-Nnbrs = 5;
-%Nnbrs = 10;
+Nnbrs = 10;
+Nnbrs = 15;
+%Nnbrs = 35;
 
 
 nbrlocs = [];    % The kspace coordinates of the data in each patch
@@ -145,7 +157,8 @@ nbrlocs = [];    % The kspace coordinates of the data in each patch
 
 Npatches = 1000;  % number of times we'll calcuate the interpolation kernel
 Npatches = 2000;  % number of times we'll calcuate the interpolation kernel
-%Npatches = 5000;
+Npatches = 3000; % 10/01/23) Next time do 5000
+Npatches = 5000; % 10/02/23 improved the slopes, but not the correlations?
 
 % Number of equations in a patch.
 % The number of unknowns in the interpolation kernel
@@ -154,7 +167,8 @@ Npatches = 2000;  % number of times we'll calcuate the interpolation kernel
 % to solve that many unknowns per grappa patch
 Nequations = round(Ncoils*Nnbrs);
 Nequations = 100;  % somehow this works better??
-%Nequations = round(Ncoils*Nnbrs)/2; % this is 160 for 10 neighbors
+Nequations = round(Ncoils*Nnbrs)/2; % this is 160 for 10 neighbors
+Nequations = round(Ncoils*Nnbrs);
 
 
 % vector with possible kspace targets (the middle half of the calibration
@@ -167,15 +181,12 @@ x = x(:);
 y = y(:);
 z = z(:);
 
-% Neighbors:  coordinates for the neighbors.  They are equally spaced
-% on the neighborhood around the center
-% (use the neighbors within the CalRegion_dim/8 region of the target)
-% allowed kspace distance (voxel offset) to the possible neighbors
+% Neighbors: relative coordinates for the neighbors.  They are on a cartesian grid
+% in the neighborhood of the target - in the center calibration region.
+% Allowed kspace distance (voxel offset) to the possible neighbors
 % in units of pixels (k-space)
-nbr_coords = [-8:-1 1:8]; % recall that the resolution has been doubled.
-nbr_coords = [-6:-1 1:6]; % recall that the resolution has been doubled. - LHG reduced 11.22.22
-%nbr_coords = [-5:-1 1:5]; % recall that the resolution has been doubled. - LHG reduced 1.10.23
-%nbr_coords = [-4:-1 1:4]; % recall that the resolution has been doubled. - LHG reduced 1.26.23
+nbr_coords = [-6:6]; % recall that the resolution has been doubled.
+
 
 % Neighbors: grid of possible voxel offsets for the neighbors
 [dx dy dz] = meshgrid(nbr_coords, nbr_coords, nbr_coords);
@@ -225,6 +236,13 @@ for p = 1:Npatches
     dz = nbr_coords(randi(length(nbr_coords), Nnbrs,1))';
     nbrlocs =  [dx dy dz];
 
+    % reject patches where one of the points is at 0,0,0
+    for n=1:size(nbrlocs,1)
+        if nbrlocs(n,:)==[0,0,0]
+            nbrlocs(n,:)=shuffle([1,0,0]);
+        end
+    end
+
    
     nbrSignals(:) = 0;
     
@@ -238,13 +256,14 @@ for p = 1:Npatches
         %{
         % ------Plots to make sure that we're in the right place
         cog = mean(nbrlocs,1);
-        plot3(x(ind), y(ind), z(ind),'ro')
+        plot3(patchcenter(1), patchcenter(2), patchcenter(3),'ro')
         hold on
-        plot3(x(ind)+dx,  y(ind)+dy, z(ind)+dz,'kx')
+        plot3(nbrlocs(:,1), nbrlocs(:,2) , nbrlocs(:,3),'kx')
         plot3(cog(1), cog(2), cog(3), 'bo')
         hold off
-        axis([-1 1 -1 1 -1 1]*10)
-        pause(0.1)
+        axis([-1 1 -1 1 -1 1]*dim3(1)*CalFraction)
+        drawnow
+        %pause(0.1)
         % ----------------------------------------------------------
         %}
         
@@ -299,16 +318,18 @@ for p = 1:Npatches
     % Invert this equation to solve for the weights
     % (the weigths are the same for each block of equations) 
     % 
-    fprintf('\rSolving GRAPPA weights for patch ... %d ', p);
+
+    % fprintf('\rSolving GRAPPA weights for patch ... %d ', p);
     
     [W, rnk, RMSE] = calc_grappa_kernel(targetSignals, nbrSignals);
 
     % store the error for coil 1
     % ... but weed out training data if the GRAPPA fit is not good
     rmse(p) = RMSE(1);
-    fprintf('RMSE =%f ', mean(RMSE));
+    fprintf('% RMSE =%f ', mean(RMSE));
     if mean(RMSE) > 1e-8
         W(:) = nan;
+        fprintf('\rSolving GRAPPA weights for patch ... %d ->', p);
         fprintf('RMSE too high - discard')
         badSamps(Nequations*(p-1)+1:Nequations*p) = 1;
     end
@@ -379,13 +400,21 @@ end
 
 % remove Training data containing NaNs
 %
+fprintf('\nRemoving BAD training samples ...\n ');
 inds = find(badSamps);
 TrainDataIn(:,:,:,inds) = [];
 TrainDataOut(:,:,inds) = [];
 %}
 
-%
+%{ 
+% randomize the order of the training data
+fprintf('\nRandomizing order of training samples ...\n ');
+shuffle_inds = randperm(size(TrainDataIn,4)); 
+TrainDataIn = TrainDataIn(:,:,:,shuffle_inds);
+TrainDataOut = TrainDataOut(:,:,shuffle_inds);
+%}
 % split the training data into training and testing data sets.
+fprintf('\nSplitting training data into training and testing ...\n ');
 Ntrain = size(TrainDataIn,4);
 %
 % Grab a fraction of them for testing
@@ -397,10 +426,7 @@ TestDataOut = TrainDataOut(:,:,inds);
 notinds = ones(Ntrain,1);
 notinds(inds) = 0;
 notinds = find(notinds);
-%{
-TrainDataIn = TrainDataIn( :,:,:, notinds) ;
-TrainDataOut = TrainDataOut(:,:, notinds);
-%}
+
 %{
 fprintf('\nSaving Training Data ...');
 whos Test* Train*
@@ -418,51 +444,74 @@ fprintf('done');
 % input dimensions:  (Nnbrs x 3)
 % output dimensions:  (Nnbrs*Ncoils*2 x 1)
 
+%%
+
 %load TrainData.mat
 %
-% - good
+% - good one 10/01/23
 GWnet = [
     
     imageInputLayer([Nnbrs 3]);
     
-    fullyConnectedLayer(Ncoils*Nnbrs*2);
-    batchNormalizationLayer;
-    reluLayer;
-    
-    fullyConnectedLayer(Ncoils*Nnbrs*10);
+    fullyConnectedLayer(Nnbrs*3);
     batchNormalizationLayer;
     reluLayer;
 
-    fullyConnectedLayer(Ncoils*Nnbrs*10);
+
+    fullyConnectedLayer(Ncoils*Nnbrs*25);
     batchNormalizationLayer;
     reluLayer;
 
-    
+    fullyConnectedLayer(Ncoils*Nnbrs*25);
+    batchNormalizationLayer;
+    reluLayer;
+
+
     fullyConnectedLayer([Nnbrs*Ncoils*2]);
     regressionLayer
 ]
 %}
-%{
-% experimental
+
+%-------------------------------------------
+% experimental :great correlations during testing!!!! 10.02.2023
+% but some coils have slope >> 1
 GWnet = [
     
     imageInputLayer([Nnbrs 3]);
     
-    fullyConnectedLayer(Ncoils*Nnbrs);
+    fullyConnectedLayer(Nnbrs*3);
     batchNormalizationLayer;
     reluLayer;
-  
-   
-    fullyConnectedLayer(Ncoils*Nnbrs*20);
+
+
+    fullyConnectedLayer(Ncoils*Nnbrs*50);
     batchNormalizationLayer;
     reluLayer;
-   
 
     fullyConnectedLayer([Nnbrs*Ncoils*2]);
     regressionLayer
 ]
+%-------------------------------------------
+% Now trying to make it wider ... 10/02/2023
+% not very good with 3000 patches on some coils.  Great in others.
+% trying now with 5000 patches - starting 10/02/2023. will check tomorrow ... 
+GWnet = [
+    
+    imageInputLayer([Nnbrs 3]);
+    
+    fullyConnectedLayer(Nnbrs*3);
+    batchNormalizationLayer;
+    reluLayer;
 
-%}
+
+    fullyConnectedLayer(Ncoils*Nnbrs*100);
+    batchNormalizationLayer;
+    reluLayer;
+
+    fullyConnectedLayer([Nnbrs*Ncoils*2]);
+    regressionLayer
+]
+%-------------------------------------------
 scale = max((TrainDataOut(:)));
 scale = 1;
 
@@ -476,11 +525,11 @@ options = trainingOptions('sgdm',...
     'Shuffle','every-epoch', ...
     'InitialLearnRate', 1e-4, ... %1e-4
     'WorkerLoad', ones([40 1]), ...
+    'MiniBatchSize', 20, ...  % reduce this (20) to avoid running out of memory (11.18.22)
     'MaxEpochs',10, ... % used to be 10
-    'MiniBatchSize', 10, ...  % reduce this (20) to avoid running out of memory (11.18.22)
     'LearnRateSchedule', 'piecewise', ...
-    'Plots', 'none'); %'training-progress');
-
+    'Plots', 'training-progress');
+    
 network_corr = zeros(Ncoils,1);
 
 % Now train this network once for each coil
@@ -540,7 +589,7 @@ for coilnum=1 :Ncoils
     rho = corrcoef(Truth(:), est(:));
     network_corr(coilnum) = rho(2,1);
 
-    figure(22)
+    figure
     plot(Truth(:), est(:),'.')
     xlabel('Truth')
     ylabel('Estimate')
@@ -550,6 +599,7 @@ for coilnum=1 :Ncoils
     drawnow
     %}
 end
+%%
 %fprintf('\nSaving networks ...')
     %save GRAPPAnet.mat  allCoilNets
 

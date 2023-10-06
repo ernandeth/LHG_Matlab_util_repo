@@ -6,7 +6,7 @@ function  obs = gen_signals_vs_230718(parms, aq_parms, dofigs,doSub, dt)
 if nargin<5
     dt = 1e-3;      % seconds
     %dt = 5e-3;
-    %dt = 0.01;      % seconds
+    dt = 0.01;      % seconds
 end
 
 r1a = 1/1.67;

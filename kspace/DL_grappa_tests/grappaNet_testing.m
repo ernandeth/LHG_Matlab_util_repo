@@ -1,45 +1,100 @@
-% load a data set:
+% edits% load a data set:
+% editing 9.19.2023
+% addpath /home/hernan/matlab/LHG_util_repo/kspace/DL_grappa_tests/
 
 
 fprintf('\nReading data ....');
 pfilename = dir('P*');
 pfilename = pfilename(1).name
-[data scaninfo]= read_raw_3d(pfilename,0);
-signal = squeeze(data(1,:,:));
-kxyz    = load('ktraj_cart.txt');
-kv      = load('kviews.txt');
 
-ndat = size(data,2) / size(kv,1);
-ncoils = size(data,3)
-nframes = size(data,1)
-nechoes = size(data,2)/ndat
+[raw,phdr] = readpfile(pfilename);
+ndat = phdr.rdb.frame_size;
+nechoes = phdr.rdb.user2;
+ncoils = phdr.rdb.dab(2) - phdr.rdb.dab(1) + 1;
+ntrains = phdr.rdb.user1;
+nframes = phdr.rdb.user0;
+tr = phdr.image.tr*1e-3;
+dim = phdr.image.dim_X;
+fov = phdr.image.dfov/10;
 
-fprintf('\nFiguring out kspace trajectory and rotations ....\n');
+% reshape: ndat x (ntrains*nframes) x nechoes x 1 x ncoils
+%           --> ndat x ntrains x nframes x nechoes x ncoils
 
-nleaves = length(unique(kv(:,1)));
-nslices = length(unique(kv(:,2)));
-kxyzR = zeros(ndat,3,nleaves,nslices);
-for leafn = 1:nleaves
-    for slicen = 1:nslices
-        R = kv((leafn-1)*nslices+slicen,end-8:end);
-        R = reshape(R,[3 3])';
-        tmpR = (R*kxyz')';
-        
-%         plot3(tmpR(:,1), tmpR(:,2), tmpR(:,3) );
-%         axis([-2 2 -2 2 -2 2])
-%         drawnow
-%         pause(0.5)
-        
-        kxyzR(:,:,leafn,slicen) = tmpR;
+raw = reshape(raw,ndat,ntrains,nframes,nechoes,ncoils);
+% permute: ndat x ntrains x nframes x nechoes x ncoils
+%           --> nframes x ndat x nechoes x ntrains x ncoils
+raw = permute(raw,[3,1,4,2,5]);
+
+% grab the first frame only for testing:
+raw = raw(1,:,:,:,:);
+nframes = 1;
+
+% T2 compensation
+%  We force the center of k-space to have the same magnitude in all echoes
+for n=1:nframes
+    for c=1:ncoils
+        for s=1:nechoes
+            for t=1:ntrains
+                raw(n, :,s,t, c) = raw(n,:,s,t, c) / (abs(raw(n,end/2,s,t,c)));
+                %plot(abs(signal2(:,s,c))); drawnow
+            end
+        end
     end
 end
-kxyzR = [reshape(kxyzR(:,1,:,:),[],1),reshape(kxyzR(:,2,:,:),[],1),reshape(kxyzR(:,3,:,:),[],1)];
+%
+%
 
-kx = kxyzR(:,1);
-ky = kxyzR(:,2);
-kz = kxyzR(:,3);
-ks = [kx(:) ky(:) kz(:)];
+signal = reshape(raw, ndat*ntrains*nechoes , ncoils);
+%
+fprintf('\nFiguring out kspace trajectory and rotations ....\n');
 
+% Process Trajectory (new)
+% Load in kspace trajectory & view transformation matrices
+ktraj = dir('ktraj*.txt');
+ktraj = load(ktraj(1).name);
+kviews = dir('kviews*.txt');
+kviews = load(kviews(1).name);
+
+% Reshape transformation matrices as an array of 3x3 matrices
+T = permute(reshape(kviews(:,end-8:end)',3,3,[]),[2,1,3]);
+
+% Allocate space for entire trajectory
+ks = zeros(ndat,3,nechoes,ntrains);
+
+% Transform each view
+for trainn = 1:ntrains
+    for echon = 1:nechoes
+        % Index the transformation matrix for current view
+        mtxi = (trainn-1)*nechoes + echon;
+
+        % Transform the trajectory
+        ks(:,:,echon,trainn) = ktraj*T(:,:,mtxi)';
+    end
+end
+
+ks = [reshape(ks(:,1,:,:),[],1),reshape(ks(:,2,:,:),[],1),reshape(ks(:,3,:,:),[],1)];
+
+
+% Coil compression:  use SVD to reduce the number of effective coils
+[comp_signal, S, CompressMat] = ir_mri_coil_compress(signal,'ncoil',10);
+
+dim3=[1 1 1]*128;
+CalRadius =0.5
+
+%[allNets rhos] = makeGrappaNet_20230112(half_kx, half_ky, half_kz, half_signal, dim3, 0.9);
+%[allNets rhos] = makeGrappaNet_20220909(half_kx, half_ky, half_kz, half_scaled_signal, dim3, CalRadius);
+[allNets rhos] = makeGrappaNet_20230919(ks(:,1), ks(:,2), ks(:,3), comp_signal, dim3, CalRadius);
+
+[cart_data dens] = GrappaNet_interpolate(allNets, comp_signal, ks, floor(dim3));
+
+im_DLI = cartesian_recon3d(cart_data, floor(dim3));
+im_DLI = im_DLI/norm(im_DLI(:));
+
+orthoview(im_DLI);
+title('DL interp. Full Data')
+
+return
+%%
 
 % Use synethetic data for troubleshooting
 %{
@@ -50,7 +105,7 @@ fprintf('\nInstead of real data, Use a numerical phantom and 6 arbitrary coils')
 %
 %plot(kxyzR)
 %%  Compare to model based with SENSE maps
-%
+%{
 recon3dflex('frames',1, 'pfile',pfilename );
 imc = readnii('coils_mag').*exp(1i*readnii('coils_ang'));
 %smap = bart('ecalib -d0 -m1',fftc(imc,1:3));
@@ -76,42 +131,11 @@ recon3dflex('smap',smap, 'frames', 1, 'clipechoes', [0 7], 'pfile',pfilename );
 %%
 % Remove second half of echo train
 half_signal = signal(1:end/2,:);
-half_kx = kx(1:end/2);
-half_ky = ky(1:end/2);
-half_kz = kz(1:end/2);
+half_kx = ks(1:end/2 , 1);
+half_ky = ks(1:end/2 , 2);
+half_kz = ks(1:end/2 , 3);
 %%
 
-% T2 compensation
-%  We force the center of k-space to have the same magnitude in all echoes
-nechoes = size(signal,1)/ndat
-signal2 = reshape(signal, ndat,nechoes, ncoils);
-for c=1:ncoils
-    for s=1:nechoes
-        signal2(:,s,c) = signal2(:,s,c) / (abs(signal2(end/2,s,c)));
-        %plot(abs(signal2(:,s,c))); drawnow
-    end
-end
-scaled_signal = reshape(signal2, nechoes*ndat, ncoils);
-half_scaled_signal = scaled_signal(1:end/2,:);
-
-%%
-%}
-dim3=[1 1 1]*48;
-CalRadius =0.4
-
-[allNets rhos] = makeGrappaNet_20230112(half_kx, half_ky, half_kz, half_signal, dim3, 0.9);
-%[allNets rhos] = makeGrappaNet_20220909(kx, ky, kz, scaled_signal, dim3, CalRadius);
-
-[allNets rhos] = makeGrappaNet_20220909(half_kx, half_ky, half_kz, half_scaled_signal, dim3, CalRadius);
-
-%%
-%
-[cart_data dens] = GrappaNet_interpolate(allNets, signal, ks, floor(dim3));
-
-im_DLI = cartesian_recon3d(cart_data, floor(dim3));
-im_DLI = im_DLI/norm(im_DLI(:));
-orthoview(im_DLI);
-title('DL interp. Full Data')
 %%
 % repeat with sensitivity maps
 
@@ -119,15 +143,15 @@ title('DL interp. Full Data')
 smap_2 = smap(:,:,:,end:-1:1);
 smap_2 = smap(:, end:-1:1,:,:);
 
- for n=1:32, 
+for n=1:32,
     figure(1)
     lbview(1-(abs(smap_2(:,:,:,n))));
-     im_DLI = cartesian_recon3d(cart_data(:,n), floor(dim3));
-     figure(2)
-     lbview(im_DLI);
-     pause; 
- end
- 
+    im_DLI = cartesian_recon3d(cart_data(:,n), floor(dim3));
+    figure(2)
+    lbview(im_DLI);
+    pause;
+end
+
 smap_2 = smap(:, end:-1:1,:,:);
 cart_data_2 = cart_data;
 %cart_data_2(:,23)= 10;
@@ -186,13 +210,13 @@ psf_mirt = readnii('psf.nii');
 psf_mirt = psf_mirt/norm(psf_mirt(:));
 
 orthoview(im_mirt);
-title('MIRT. Full Data') 
+title('MIRT. Full Data')
 
 figure
 uim_mirt = readnii('half_ref_timeseries_mag');
 uim_mirt = uim_mirt/norm(uim_mirt(:));
 orthoview(uim_mirt);
-title('MIRT. Half Data') 
+title('MIRT. Half Data')
 
 % figure
 % orthoview(psf_mirt);
@@ -205,19 +229,19 @@ writenii('DL_psf', psf);
 
 figure;
 orthoview(im_DLI);
-title('DLI Full Data') 
+title('DLI Full Data')
 
 figure
 orthoview(uim_DLI);
-title('DLI Half Data') 
+title('DLI Half Data')
 
 figure;
 orthoview(im_DLI_s);
-title('DLI (S-MAP) Full Data') 
+title('DLI (S-MAP) Full Data')
 
 figure
 orthoview(uim_DLI_s);
-title('DLI (S-MAP) Half Data') 
+title('DLI (S-MAP) Half Data')
 
 scl = [-1 1]*1e-2;
 

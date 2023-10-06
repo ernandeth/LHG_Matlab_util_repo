@@ -17,7 +17,7 @@ raw = readnii(tseries_file);
 raw2 = smoothim(raw,'fwhm',3/64);
 msk = makevarmask(raw2 , 75);
 msk(:) = 1;
-lbview(msk); 
+lbview(msk);
 raw = raw.*msk;
 
 %{
@@ -67,11 +67,28 @@ aqparms.t_aq        = aqparms.t_aq(1:Nframes);
 aqparms.order       = 1;
 fprintf('\nThese are the acquisition parmeteres.  Begin estimation? (hit ENTER or CTL-C)')
 aqparms
-pause
+
+aqparms.Ma = [];
+
+parms.f= 0.01;
+parms.Mtis0 = 1;
+parms. cbva = 0.01;
+parms.bat = 0.1;
+parms.r1tis= 1;
+parms.flip= deg2rad(90);
+parms.r2tis = 0.1;
+parms.b1err=0;
+
+% generate test data and get the arterial input function
+doSub = 0;
+dofigs = 1;
+%data = gen_signals_vs_230718(parms, aq_parms, dofigs,doSub);
+[data Mart]= gen_signals_vs_230918(parms, aqparms, dofigs,doSub);
+aqparms.Ma = Mart;
+
 
 parfor p =1:Npix
     if msk(p) == 1
-        fprintf('\nVoxel %d ... %0.2f percent of voxels done',p, 100*p/Npix );
 
         % step 1: estimate relaxation parms
         [a b c] = mrf_lsq_rlx(timeseries(p,:), aqparms, 0);
@@ -88,9 +105,11 @@ parfor p =1:Npix
         bat(p) = est(3);
         res(p) = R;
         %}
-            
+
 
         if mod(p,500)==0  % for debugging purposes, show the fit every 1000 voxels
+            fprintf('\nVoxel %d ... %0.2f percent of voxels done',p, 100*p/Npix );
+
             [est R] = mrf_lsq_flow(timeseries(p,:), aqparms, [a b c], 1);
         end
 

@@ -1,8 +1,10 @@
-function  obs = gen_signals_vs_230918(parms, aq_parms, dofigs,doSub, dt)
+function  [obs Ma] = gen_signals_vs_230918(parms, aq_parms, dofigs, doSub, dt)
 % this version is modified to agree with the timings of the new pulse
 % sequence asl3dflex
 % it also considers the effect of multiple pulses on the arterial
 % compartment - splits into multiple populations
+% this function returns the arterial Magnetization function Ma (before
+% dispersion)
 
 % constants
 if nargin<5
@@ -30,7 +32,7 @@ if (nargin ==0)
     Mtis0 =     1 ;
     flip =      10*pi/180 ; % flip angle in radians
     r2tis =     1/0.090 ;
-    
+
     % include a B1 error term in the labeling pulses
     % 0 error means multiplying by 1.
     % 1% error mean multiplying by 1.01
@@ -39,7 +41,7 @@ if (nargin ==0)
     % processing defaults
     doSub = 1;
     dofigs = 1;
-        
+
     % pulse sequence parameters
     Nframes = 4;
     label_type =    'FTVSI-sinc'; %'FTVSS'; %'FTVSI-sinc'; % 'BIR8inv'; % 'BIR8'
@@ -51,7 +53,7 @@ if (nargin ==0)
     labelcontrol =  zeros(Nframes,1);
     labelcontrol(2:2:end)= 1;
     %labelcontrol(1:2) =   -1;
-    order =         1;    
+    order =         1;
     doArtSup =      ones(Nframes,1);
     %doArtSup(end/2+1:end)= 0;
     doArtSup(1:2)=    0;
@@ -60,10 +62,11 @@ if (nargin ==0)
     del1 = 1.5*ones(Nframes, 1);
     del2 = 0.5*ones(Nframes,1);
     %}
-    
+    Ma = [];
+
     RO_time = 0.750 ;  % duration of the whole readout
     Nkz = 16;
-    
+
 else
     Nkz = 16;
 
@@ -79,7 +82,13 @@ else
     doArtSup =      aq_parms.doArtSup;
     RO_time =       aq_parms.t_aq(1);
     RO_type =       aq_parms.RO_type;
-    
+
+    if isfield(aq_parms, 'Ma')  % maybe the input function is already precomputed.
+        Ma = aq_parms.Ma;
+    else
+        Ma=[];
+    end
+
     % Tissue parms
     f = parms.f;
     Mtis0 = parms.Mtis0;
@@ -106,7 +115,7 @@ if order==2  %  2023.08.08....original should be  2 (just checking to see if the
     tmplabelcontrol(labelcontrol==0) = 1;
     tmplabelcontrol(labelcontrol==1) = 0;
     tmplabelcontrol(labelcontrol==-1) = -1;
-    
+
     labelcontrol = tmplabelcontrol;
 end
 
@@ -143,7 +152,7 @@ switch(label_type)
         alpha1_art_ns   = -T2loss_art_bir8;
         pulse1_dur    = 0.0272;
         %}
-        
+
     case 'BIR8'
         % first pulse BIR8-sat : T2 effects
         % tissue does this: M(n) =  M(n-1) * alpha1_tis_sel
@@ -197,13 +206,13 @@ alpha2_art_ns  = (T2loss_art_bir8);
 % include B1 errors (bad efficiency) LHG 4/11/23
 % alpha1_art_sel = alpha1_art_sel * b1err;
 % alpha1_art_ns  = alpha1_art_ns * b1err;
-% 
+%
 % alpha2_art_sel = alpha2_art_sel * b1err;
 % alpha2_art_ns  = alpha2_art_ns * b1err;
 
 % alpha1_tis_sel = alpha1_tis_sel * b1err;
 % alpha1_tis_ns  = alpha1_tis_ns * b1err;
-% 
+%
 % alpha2_tis_sel = alpha2_tis_sel * b1err;
 % alpha2_tis_ns  = alpha2_tis_ns * b1err;
 
@@ -213,7 +222,7 @@ nbat = round(bat/dt);
 Nframes = length(del2);
 obs = zeros(Nframes,1);
 
-% the VS pulses are executed by the pulse sequence in a separate core.  
+% the VS pulses are executed by the pulse sequence in a separate core.
 % Here, we include them at the end of the first delay (t_adjust)
 % their effect is 'felt' at the end
 % del1 = del1 + pulse1_dur;
@@ -343,35 +352,70 @@ bolus = exp(-tt*r1a)';
 tt_aq = linspace(0, RO_time, img_time);  % bolus duration from imaging
 % in FSE readout,  assume that the first readout pulse saturates the arterial spins
 % and the refocusing train doesn't affect the label significantly
-AQbolus = exp(-tt_aq*r1a)';  
+AQbolus = exp(-tt_aq*r1a)';
 % in GRE readout, assume the readout has no effect on the label
 if RO_type=='GRE'
     AQbolus(:) = 0;
 end
-% initialize the arterial concentration of "label" to zero
-Ma = ones(Npts, 1);
 
-%Ma(1:bolus_length)= 0.5 * bolus;  % everything starts with a BGS pulse
 
-for n = MM:length(timevec)
-   % 
-    % Labeling pulses (vsfun) effect on the arterial contents:
-    if vsfun(n-1) == 1  % gradients ON - velocity selective
-        Ma(n )= Ma(n-1)*alpha1_art_sel;
-    end    
-    if vsfun(n-1) == -1 % gradients OFF - NOT velocity selective
-        Ma(n) =  Ma(n-1)*alpha1_art_ns;
-    end
-   
-    % ArtSup pulses cause saturation of the blood.
-    % saturation recovery curve
-    if asfun(n-1) == 1
-        Ma(n)= alpha2_art_sel;
-    end
-    
-    % Assume that Artsup control pulses don't do anything to  arterial
-    % blood.  T2 effects on tissue spins only.
-    %{
+% Note that the arterial input function could be precomputed already
+% if it's empty, then we'll need to compute it now;
+if isempty(Ma)
+    % initialize the arterial concentration of "label" to one
+    Ma = ones(Npts, 1);
+    Ma_fresh = ones(Npts, 1);  % these are the fresh arterial spins
+    % that haven't seen any pulses yes
+
+    %Ma(1:bolus_length)= 0.5 * bolus;  % everything starts with a BGS pulse
+
+    last_event = 1;
+    flow_time = 0;
+    for n = MM:length(timevec)
+        %
+        % Labeling pulses (vsfun) effect on the arterial contents:
+        if vsfun(n-1) == 1  % gradients ON - velocity selective
+            Ma(n )= Ma(n-1)*alpha1_art_sel;
+            Ma_fresh(n) = alpha1_art_sel;
+            flow_time = dt*(n-last_event);
+            last_event = n;
+            % we now combine the two populations according to how much time
+            % elapsed since the last pulse.
+            % the weight is a sigmoid centered around the bolus duration
+            W = 1/(1 + exp(-(3.0-flow_time)/0.1));
+            Ma(n) = W*Ma(n) + (1-W)*Ma_fresh(n);
+
+        end
+        if vsfun(n-1) == -1 % gradients OFF - NOT velocity selective
+            Ma(n) =  Ma(n-1)*alpha1_art_ns;
+            Ma_fresh(n) =  alpha1_art_ns;
+            flow_time = dt*(n-last_event);
+            last_event = n;
+            % we now combine the two populations according to how much time
+            % elapsed since the last pulse.
+            % the weight is a sigmoid centered around the bolus duration
+            W = 1/(1 + exp(-(3.0-flow_time)/0.1));
+            Ma(n) = W*Ma(n) + (1-W)*Ma_fresh(n);
+
+        end
+        % ArtSup pulses cause saturation of the blood.
+        % saturation recovery curve
+        if asfun(n-1) == 1
+            Ma(n)= alpha2_art_sel;
+            Ma_fresh(n)= alpha2_art_sel;
+            flow_time = dt*(n-last_event);
+            last_event = n;
+            % we now combine the two populations according to how much time
+            % elapsed since the last pulse.
+            % the weight is a sigmoid centered around the bolus duration
+            W = 1/(1 + exp(-(3.0-flow_time)/0.1));
+            Ma(n) = W*Ma(n) + (1-W)*Ma_fresh(n);
+
+        end
+
+        % Assume that Artsup control pulses don't do anything to  arterial
+        % blood.  T2 effects on tissue spins only.
+        %{
     % ArtSup control pulses cause T2 attenuation
     if asfun(n-1) == -1
         if Ma(n-1) > 0.5
@@ -380,39 +424,43 @@ for n = MM:length(timevec)
             Ma(n+1 : n+bolus_length)= Ma(n-1)*(0.5+alpha2_art_ns) * bolus;
         end
     end
-    %}
+        %}
 
-    
-%----- test 8.2.23 (no effect from global saturation pulse on the arteries)
-%
-%----- end test code 8.2.23 
-    % LHG: 2/6/2022  adapt for FSE vs. GRE 
-    % Effect of the readout is that it perturbs magnetization in arteries
-    % as well as the tissue.
-    % Assume that the tipdown (90) saturates the arteries
-    % but that the refocusers don't affect the Mz component.
-    % After the readout, there is a global saturation pulse.
-    % This resets the magnetization in all compartments to zero.
-    if aqfun(n)==1
-%         if n>img_time+1
-%             if RO_type == 'FSE'
-%                 % tipdown pulse saturates arteries
-%                 Ma(n+1  : n+img_time)= 0.5 * AQbolus ;
-%             end
-%         end
 
-%         % BGS pulse after readout also saturates the arteries
-%         Ma(n+img_time+BGS0_length+1 : ...
-%             n+img_time+BGS0_length + bolus_length)= 0.5 * bolus;
+        %----- test 8.2.23 (no effect from global saturation pulse on the arteries)
+        %
+        %----- end test code 8.2.23
+        % LHG: 2/6/2022  adapt for FSE vs. GRE
+        % Effect of the readout is that it perturbs magnetization in arteries
+        % as well as the tissue.
+        % Assume that the tipdown (90) saturates the arteries
+        % but that the refocusers don't affect the Mz component.
+        % After the readout, there is a global saturation pulse.
+        % This resets the magnetization in all compartments to zero.
+        %if aqfun(n)==1
+        %         if n>img_time+1
+        %             if RO_type == 'FSE'
+        %                 % tipdown pulse saturates arteries
+        %                 Ma(n+1  : n+img_time)= 0.5 * AQbolus ;
+        %             end
+        %         end
+
+        %         % BGS pulse after readout also saturates the arteries
+        %         Ma(n+img_time+BGS0_length+1 : ...
+        %             n+img_time+BGS0_length + bolus_length)= 0.5 * bolus;
+        %end
+        %}
+
+        % Now implement Bloch equation
+        dMa = (1-Ma(n))*r1a;
+        Ma(n+1) = Ma(n) + dMa*dt;
+
+        dMa_fresh = (1-Ma_fresh(n))*r1a;
+        Ma_fresh(n+1) = Ma_fresh(n) + dMa_fresh*dt;
+
+
     end
-    %}
-
-    % Now implement Bloch equation
-    dMa = (1-Ma(n))*r1a;
-    Ma(n+1) = Ma(n) + dMa*dt;
-
 end
-
 
 
 %Ma = Ma2;
@@ -437,7 +485,7 @@ Ma_ex = Ma_ex/max(Ma_ex) ;%* max(Ma)*exp(-bat*r1a);
 %Ma_ex = 1-2*Ma_ex;
 %Ma = 1-2*Ma;
 %Ma = Ma_ex;
-
+keyboard
 
 % Tissue Magnetization time courses
 % Do NOT assume a BGS pulse at the very begining
@@ -460,16 +508,16 @@ del3 = [del3;del3(end)];
 aqfun_plot = aqfun;
 
 for n = nbat+MM+1:length(timevec)
-    
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%
     % The diff eqs governing the three pools of protons
     % in the voxel
     %%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
+
     %  blood in artery
     %dMa = (Ma0 - Ma(n-1))*r1a ;
     %Ma(n) = Ma(n-1) + dMa*dt;
-    
+
     % considering a flow through compartment:
     % blood in artery at exchange site separately:
     % same thing, but has BAT lag (see below)
@@ -480,12 +528,12 @@ for n = nbat+MM+1:length(timevec)
     % the contents of the Ma compartment feed into the exchange compartment
     % with a delay. This also means some more T1 decay before it can
     % exchange
-    
+
     %S =  Ma(n-nbat);
     %S =  mean(Ma(n-nbat-MM:n-nbat+MM));
-    
+
     %Ma_ex(n) = Ma0-(Ma0-S)*exp(-bat*r1a);
-    
+
     % the modified Bloch equation has
     % t1 decay, , inflow, outflow
     % dM = (Mtis0 - M(n-1))*r1tis  + f * Ma_ex(n-1) - f * M(n-1)/lambda;
@@ -495,12 +543,12 @@ for n = nbat+MM+1:length(timevec)
     %     MM=5;
     %     S = [M(n-MM:n-1)]' * [1:MM]'/sum(1:MM);
     %     M(n) = S + dM*dt;
-    
+
     %%%%%%%%%%%%%%%%%%%
     % update the Tissue and Arterial Compartments when the pulses are
     % applied
     %%%%%%%%%%%%%%%%%%%
-    
+
     % selective pulse
     if vsfun(n-1) == 1
         M(n) =  M(n) * alpha1_tis_sel;
@@ -509,29 +557,29 @@ for n = nbat+MM+1:length(timevec)
     if vsfun(n-1) == -1
         M(n) =  M(n) * alpha1_tis_ns;
     end
-    
+
     % T2 effects from the arterial selective saturation pulse
     % whether the crusher gradients are on or not.
     if asfun(n-1) ~= 0
         M(n) =  M(n) * (alpha2_tis_ns); % T2 effect only : no inversion
     end
-    
+
     %%%%%%%%%%%%%%%%%%%%%%
     % Readout  from the different pools
     % dependence on flip angle
     %  Mz gets tipped toward the xy plane by the sampling RF pulses
     if  aqfun(n)==1
         % the observed signal on the xy plane:  Tissue + Blood compartments
-        
-        % LHG 4/17/23 - added the missing abs()       
-        obs(aq) = abs( (1-cbva)*M(n-1)*sinflip + cbva*Ma(n-1) * sinflip); 
-        
+
+        % LHG 4/17/23 - added the missing abs()
+        obs(aq) = abs( (1-cbva)*M(n-1)*sinflip + cbva*Ma(n-1) * sinflip);
+
         obs_t(aq) = M(n-2) * sinflip;
         obs_a(aq) = Ma(n-2)* sinflip;
-        
+
         aq = aq +1;
         start_readout = n;  % mark the begining of the acquisition
-        
+
         % effect of the readout pulse
         M(n) = M(n-1) * cosflip;
         kz = 1;
@@ -540,26 +588,26 @@ for n = nbat+MM+1:length(timevec)
     end
 
 
-    % LHG:2/6/22 - adapted for FSE and GRE cases 
+    % LHG:2/6/22 - adapted for FSE and GRE cases
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % readout causes partial saturation of spins
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     if  (n == start_readout + slice_time*kz)
-       M(n) = M(n) * cosflip;
-       kz = kz + 1;
-       if kz == Nkz +1
-           kz = 1;
-       end
-     end
+    if  (n == start_readout + slice_time*kz)
+        M(n) = M(n) * cosflip;
+        kz = kz + 1;
+        if kz == Nkz +1
+            kz = 1;
+        end
+    end
 
-     % effect of global sat pulse (BGS) at end of readout: reset the magnetization
-     if  (n == (start_readout + img_time + BGS0_length))
-         M(n) = 0;
-         %M(n) = b1err-1;
-         start_readout = 0;
-     end
+    % effect of global sat pulse (BGS) at end of readout: reset the magnetization
+    if  (n == (start_readout + img_time + BGS0_length))
+        M(n) = 0;
+        %M(n) = b1err-1;
+        start_readout = 0;
+    end
     %}
-    
+
 end
 
 if doSub
@@ -574,24 +622,24 @@ obs = obs';
 
 %%
 if dofigs
-    
+
     %some times they don't match up.  rounding error somewhere?
     ed = length(M);
     labelfun = vsfun;
     labelfun = labelfun(1:length(timevec));
     aqfun_plot = aqfun_plot(1:length(timevec));
-    
+
     %figure()
     subplot(311)
     area(timevec(1:ed),aqfun_plot(1:ed),'FaceColor', 0.8*[1 1 1]);
     hold on
     stem(timevec(1:ed),labelfun(1:ed),'r')
     stem(timevec(1:ed),asfun(1:ed),'m');
-    
+
     legend('Readout', 'Label', 'ArtSup')
     hold off
     axis tight
-    
+
     subplot(312)
     area(timevec(1:ed),aqfun_plot(1:ed),'FaceColor', 0.8*[1 1 1])
     hold on
@@ -600,11 +648,11 @@ if dofigs
     plot(timevec(1:ed),Ma_ex(1:ed),'r')
     legend('ReadOut','Tis', 'Art', 'ArtX')
     axis([min(timevec) max(timevec) -1 1])
-    
+
     hold off
-  %  axis tight
+    %  axis tight
     grid on
-    
+
     subplot(313)
     plot(obs_a)
     hold on
@@ -614,7 +662,7 @@ if dofigs
     legend('Arterial', 'Tissue', 'Both') % , 'Art')
     hold off
     grid on
-    
+
     drawnow()
 end
 
