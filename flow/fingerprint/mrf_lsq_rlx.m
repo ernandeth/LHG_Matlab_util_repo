@@ -1,5 +1,5 @@
-function [r1 r2 b1err] = mrf_lsq_rlx(timeseries, aq_parms, showFit)
-% function [r1 r2 b1err] = mrf_lsq_rlx(timeseries, aq_parms, showFit)
+function [r1 r2 b1err] = mrf_lsq_rlx(timeseries, aq_parms, Fparms, showFit)
+% function [r1 r2 b1err] = mrf_lsq_rlx(timeseries, aq_parms, Fparms, showFit)
 %
 % Estimate relaxation parameters from VSASL MRF data
 % Do a least squares fit of the data to a model of VSASL
@@ -11,6 +11,7 @@ function [r1 r2 b1err] = mrf_lsq_rlx(timeseries, aq_parms, showFit)
 % INputs: 
 %   timeseries: the data to fit
 %   aq_parms:   structure with readout parameters
+%   Fparms :    flow related parameters: cbf cbv, bat
 %   showFit:    this parameter lets you watch the fit evolve.  It's for
 %               troubleshooting only
 %
@@ -31,22 +32,25 @@ function [r1 r2 b1err] = mrf_lsq_rlx(timeseries, aq_parms, showFit)
 % For a demo, you can also call it without any parameters
 %
 
+if nargin==0
+    Fparms = [0.01 0.02 0.2];
+end
+
 % Set some Tissue parameters
-parms.f=          50 /6000;
-parms.cbva =      0.02 ;
-parms.bat =       0.08 ;
+parms.f=          Fparms(1);
+parms.cbva =      Fparms(2) ;
+parms.bat =       Fparms(3) ;
 parms.Mtis0 =     1 ;
-parms.flip =      deg2rad(10) ; % flip angle in radians
 parms.r1tis =     0.7  ;
 parms.r2tis =     11 ;
-
 parms.b1err =   0.0;
 
 if nargin==0
     % Set pulse sequence parameters
     Nframes = 20;
-    aq_parms.label_type =    'BIR8inv'; %'FTVSI-sinc'; % 'BIR8inv'; % 'BIR8'
-    aq_parms.RO_type =  'FSE'; %'FSE';   % 'GRE'
+    aq_parms.label_type =    'BIR8'; %'FTVSI-sinc'; % 'BIR8inv'; % 'BIR8'
+    aq_parms.RO_type =      'GRE'; %'FSE';   % 'GRE'
+    aq_parms.flip =         deg2rad(30);
     aq_parms.t_tags =        0;% 0.1*ones(Nframes,1);
     aq_parms.del1 =          0.2*ones(Nframes, 1);
     aq_parms.del2 =          0.2+0.5*sin(linspace(0.1,4*pi,Nframes))';
@@ -72,9 +76,6 @@ if nargin==0
 
 end
 
-if(aq_parms.RO_type=='GRE')
-    parms.flip = deg2rad(20);
-end
 
 % checking the model fit for this schedule using synth data
 % (if you uncomment this, things will fit really well)
@@ -91,8 +92,8 @@ timeseries = timeseries/norm(timeseries);
 % set up the estimation problem
 % typical R1 , R2,  B1error values
 guess0= [1/1.2  1/0.08  0.05];
-lb =    [1/4    1/0.5   -0.5];
-ub =    [1/0.4  1/0.02  0.5]; 
+lb =    [1/4    1/0.5   -0.25];
+ub =    [1/0.4  1/0.02  0.25]; 
 
 opts = optimoptions(@lsqnonlin);
 %opts.MaxIterations = 1000;
@@ -103,6 +104,7 @@ opts.SubproblemAlgorithm="cg";
 % opts.FunctionTolerance = 1e-8;
 % opts.StepTolerance = 1e-8;
 opts.FiniteDifferenceType ='central';
+opts.Display='off';
 
 if showFit
     opts.Display = "iter-detailed";

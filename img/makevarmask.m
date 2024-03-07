@@ -6,7 +6,12 @@ function msk = makevarmask(raw , th)
 % variance in the data
 % output: binary mask (3D)
 
-varimage=std(raw,[],4);
+dim=size(raw);
+if numel(dim)==4
+    varimage=std(raw,[],4);
+elseif numel(dim)==3
+    varimage=std(raw,[],3);
+end
 
 ordered = sort(varimage(:));
 Nintgrl = cumsum(ordered)/sum(ordered(:)) * 100;

@@ -1,5 +1,5 @@
-function [signal b1map ] = sim_kspace3d_sense(kxs, kys, kzs)
-% function [signal b1maps ] = sim_kspace3d_sense(kxs, kys, kzs)
+function [signal b1map ] = sim_kspace3d_sense(kxs, kys, kzs, densmap)
+% function [signal b1maps ] = sim_kspace3d_sense(kxs, kys, kzs, densmap)
 %
 % (c) Luis Hernandez-Garcia @UM 2022
 %
@@ -13,7 +13,11 @@ function [signal b1map ] = sim_kspace3d_sense(kxs, kys, kzs)
 %
 
 %%
-MYDIM = 65;
+MYDIM = 64;
+if nargin==4
+    MYDIM = size(densmap,1)
+end
+
 Ncoils = 8;
 ks = [kxs, kys, kzs];
 Kmax = max(abs(ks(:)));
@@ -21,43 +25,54 @@ Kmax = max(abs(ks(:)));
 % Make some very simplistic complex sensitivity maps
 b1map = zeros(MYDIM, MYDIM, MYDIM, Ncoils);
 kim = b1map;
-fieldw = 600;
-for m=1:MYDIM
-    for n=1:MYDIM
-        for p=1:MYDIM
-            b1map(m,n,p,1) = 0.15 + exp(-i*pi/9 ) * exp(-((m-35).^2 + (n-60).^2 + (p-35).^2 )/ fieldw);
-            b1map(m,n,p,2) = 0.15 + exp(-i*pi/10) * exp(-((m-35).^2 + (n-5).^2 + (p-35).^2 )/ fieldw);
-            
-            b1map(m,n,p,3) = 0.15 + exp(-i*pi/11) * exp(-((m-60).^2 + (n-35).^2 + (p-20).^2 )/ fieldw);
-            b1map(m,n,p,4) = 0.15 + exp(-i*pi/12) * exp(-((m-5).^2 + (n-35).^2 + (p-20).^2 )/ fieldw);
-            
-            b1map(m,n,p,5) = 0.15 + exp(-i*pi/11) * exp(-((m-60).^2 + (n-35).^2 + (p-45).^2 )/ fieldw);
-            b1map(m,n,p,6) = 0.15 + exp(-i*pi/12) * exp(-((m-5).^2 + (n-35).^2 + (p-45).^2 )/ fieldw);
-            
-            b1map(m,n,p,7) = 0.15 + exp(-i*pi/7) * exp(-((m-35).^2 + (n-35).^2 + (p-5).^2 )/ fieldw);
-            b1map(m,n,p,8) = 0.15 + exp(-i*pi/8) * exp(-((m-35).^2 + (n-35).^2 + (p-60).^2 )/ fieldw);
+fieldw = 5000;
+offset = MYDIM/3;
+
+dxc = [1 -1  1  1  1  1 -1 -1];
+dyc=  [1  1 -1  1  1 -1 -1 -1];
+dzc = [1  1  1 -1 -1 -1  1 -1];
+
+for c=1:8
+
+    dx = MYDIM/2 - offset*dxc(c);
+    dy = MYDIM/2 - offset*dyc(c);
+    dz = MYDIM/2 - offset*dzc(c);
+    
+    for m=1:MYDIM
+        for n=1:MYDIM
+            for p=1:MYDIM
+                b1map(m,n,p,c) = exp(-i*c*pi/9 ) * ...
+                    exp(-((m-dx).^2 + (n-dy).^2 + (p-dz).^2 )/ fieldw);
+            end
         end
     end
 end
-
 % Next - make the sensitivities significantly different from each other
 % for troubleshooting purposes.
-b1map = b1map *10;
-%
+%{
 b1map(:,:,:,2) = 2 * b1map(:,:,:,2);
 b1map(:,:,:,4) = 2 * b1map(:,:,:,4);
 b1map(:,:,:,6) = 2 * b1map(:,:,:,6);
 %}
 
-% make a synthetic object
-im = phantom3d(MYDIM);
-%im(52:60, 42:60, 42:60) = 2;
+% Normalize the sense maps here abd (Ssquaress) should be 1
+btmp = sum(abs(b1map).^2, 4);
+orthoview(abs(b1map(:,:,:,4)))
 
-% using noise to give more texture to the image
-msk = ones(size(im));
-msk(im==0) = 0;
-mynoise = (smooth3(randn(size(im))));
-im = abs(msk .* im.*(2+mynoise));
+if nargin==4
+    im = densmap;
+else
+    % make a synthetic object
+    im = phantom3d(MYDIM);
+    %im(52:60, 42:60, 42:60) = 2;
+
+    % using noise to give more texture to the image
+    msk = ones(size(im));
+    msk(im==0) = 0;
+    mynoise = (smooth3(randn(size(im))));
+    im = abs(msk .* im.*(2+mynoise));
+end
+
 lightbox(im); colormap parula
 drawnow
 im = im(:);
@@ -65,62 +80,59 @@ im = im(:);
 % weigh the object by individual coil sensitivity maps 
 im_sens = zeros(length(im), Ncoils);
 figure
+b_rms = 0;
 for c = 1:Ncoils
-    b1 = b1map(:,:,:,c);  b1 = b1(:);
+    b1 = b1map(:,:,:,c);  
+    b1 = b1(:);
     im_sens(:,c) = im.*b1;
 
     subplot(3,3,c)
-    b=(reshape(abs(im_sens(:,c)), MYDIM, MYDIM, MYDIM) ); 
-    lightbox((b(: ,:, 1:3:end)));
+    b=(reshape((im_sens(:,c)), MYDIM, MYDIM, MYDIM) ); 
+    orthoview(abs(b));
     %caxis([0 2])
     title(sprintf('coil %d', c))
+
+    b_rms = b_rms + b.^2;
 end
+b_rms = sqrt(b_rms);
 colormap parula
 drawnow
 
+figure
+lbview(abs(b_rms))
+title('RMS sum of coils')
 %%
 % image space grid
-FOV = 20;
+FOV = 24;
 [rx , ry, rz ]= meshgrid( ...
     linspace(-FOV/2,FOV/2,MYDIM), ...
     linspace(-FOV/2,FOV/2,MYDIM), ...
     linspace(-FOV/2,FOV/2,MYDIM));
+
 rx = rx(:);
 ry = ry(:);
 rz = rz(:);
-rlocs = [rx ry rz];
+
 
 % compute the signal equation for each coil 
 Nvox = MYDIM^3;
 Nt = length(ks);
-signal = zeros(Nt, Ncoils);
+signal = dlarray(zeros(Nt, Ncoils));
 
 
-fprintf('\nSynthesizing signal for each coil from the signal equation .. ');
-fprintf('\nBreaking trajectory into segments for efficiency ...');
+fprintf('\nSynthesizing signal for each coil (signal equation) ... ');
+%fprintf('\nBreaking trajectory into segments for efficiency ...');
+ 
+gpuDevice(1)
+ktraj = gpuArray([kxs, kys,  kzs]);
+rlocs = gpuArray([rx ry rz]);
+im_sens = gpuArray(im_sens);
 
-tic  
-
-% figure out how many segments to break signal into:
-klen = length(kxs);
-Nsegments = 40;
-while mod(klen, Nsegments)
-    Nsegments = Nsegments+1;
-end
-% size of each segment
-kseglen = klen/Nsegments;
-inds = zeros(kseglen,1);
-tmp = zeros(kseglen, Ncoils);
+for n=1:Ncoils
     
-
-for n=1:Nsegments
-    t = tic;
-    inds = [1:kseglen] + (n-1)*kseglen;
-    ktraj = [kxs(inds), kys(inds), kzs(inds)];
+    signal(:, n) = mr_signal(im_sens(:,n) , ktraj,  rlocs);
     
-    signal(inds, :) = mr_signal(im_sens , ktraj,  rlocs);
     
-    fprintf('\n segment %d of %d ... %f seconds', n, Nsegments, toc(t));
 end
 
 figure
@@ -135,7 +147,7 @@ function signal = mr_signal(rho, ks,  r)
 % computes the signal equation integral 
 % Sum signals over all voxels
 %
-%   rho : spin density map, weighted by coils  (Nlocs x Ncoils)
+%   rho : spin density map, weighted by the coil  (Nlocs x 1)
 %   ks :  kspace trajetory segment (kseglen x 3)
 %   r :   image space coordinates   (Nlocs x 3)
 %
@@ -143,13 +155,42 @@ function signal = mr_signal(rho, ks,  r)
 % Then do the weighted sum of the signals from all voxels (weighted by the
 % density)
 
-Ncoils = size(rho,2);
-kseglen = size(ks,1);
-signal = zeros(kseglen, Ncoils);
 
+klen = size(ks,1);
+signal = zeros(klen, 1);
+
+%----
+% figure out how many segments to break signal into:
+% each segment will have a fixed size
+kseglen = 100;
+Nsegments = floor(klen/kseglen)+1;
+kseglen_end = mod(klen , kseglen);  % leftover points for last segment
+inds = zeros(kseglen,1);
+tmp = zeros(kseglen, 1);
+
+    %kphase = exp(-i *2*pi* (ks*r')) ;
+%
+for s=1:Nsegments-1
+    %fprintf('\rSegment %d of %d. ', s, Nsegments);
+    %tic
+    inds = [1:kseglen] + (s-1)*kseglen;
+    kphase = exp(-i *2*pi* (ks(inds,:)*r')) ;
+    signal(inds)=  kphase*rho;
+    %toc 
+end
+
+% now the remainder of the points ...
+inds = [1:kseglen_end] + (Nsegments-1)*kseglen;
+kphase = exp(-i *2*pi* (ks(inds,:)*r')) ;
+%}
+    signal(inds)=  kphase*rho;
+%---------
+
+
+%{
 kphase = exp(-i *2*pi* (ks*r')) ;
 for c=1:Ncoils
     signal(:,c)=  kphase*rho(:,c);
 end
-
+%}
 return

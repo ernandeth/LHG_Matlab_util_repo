@@ -15,7 +15,7 @@ T2 = 165;   %ms  from Qin paper
   
 homogeneity = 'perfect'; % 'perfect'  % 'bad_B0_B1'
 refocus_scheme = 'MLEV'; % 'MLEV' % 'DR180'
-base_pulse =  'sinc'; %'hard' %  % 'sinc'  % 'hard'; % sech, hard, BIR
+base_pulse =  'sinc-mod'; %'hard'   % 'sinc'  % 'hard'; % sech, hard, BIR
 
 batch_mode = 0;
 exportPulses = 0;

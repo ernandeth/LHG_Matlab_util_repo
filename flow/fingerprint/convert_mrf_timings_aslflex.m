@@ -9,6 +9,7 @@ Nframes = length(aqparms.del1);
 
 % prep pulse 1i type of pulse
 p1_id = aqparms.label_type;
+
 switch(p1_id)
     case 'BIR8inv'
         p1_id=6800;
@@ -40,7 +41,7 @@ wtextfile('scnr_timing/tadjusttbl.txt', tmp, '%d')
 % do nothing, label or control?
 tmp = aqparms.labelcontrol;
 wtextfile('scnr_timing/prep1_lbltbl.txt', tmp, '%d')
-
+conve
 
 % prep1 pld , aka, t_delay or del2
 % time between ibeginning of label pulse 1 and beginging of label pulse 2

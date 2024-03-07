@@ -9,16 +9,19 @@ exportPulses = 0;
 dt = 1e-3;
 showEvolution = 0;
 isControl = 0;
-    
+ 
+gambar = 42.576*2*pi; % rad/s/T
+   
 T1 = 1700;  %ms
 T2 = 165;   %ms  from Qin paper
+vel_target = 10;
     
 % T1 = 1400;
 % T2 = 110;
 
 homogeneity = 'perfect'; % 'perfect'  % 'bad_B0_B1'
 refocus_scheme = 'MLEV'; % 'MLEV' % 'DR180'
-base_pulse =  'sinc_mod_90'; % 'sinc_mod'   % 'sinc'  % 'hard'; % sech, hard, BIR 'hard_90'
+base_pulse =  'sinc_mod_90'; %'sinc_mod_90'; % 'sinc_mod'   % 'sinc'  % 'hard'; % sech, hard, BIR 'hard_90'
 
 if batch_mode
     homogeneity ='';
@@ -101,7 +104,7 @@ switch base_pulse
     case 'sinc_mod'
         
         mySinc_dur = 1.44; % ms
-        %mySinc_dur = 3.6; % ms - 17268 pulse (9 x 0.4) 
+        mySinc_dur = 3.6; % ms - 17268 pulse (9 x 0.4) 
 
         mySinc_dur = round(mySinc_dur/dt/Nsegs) * Nsegs*dt; % ms
         mySinc = sinc(linspace(-0.8, 0.8,  mySinc_dur/dt))' ;
@@ -170,7 +173,7 @@ switch base_pulse
         hard180 = ones(hard180_dur/dt);
         
         hard180_area = sum(hard180)*dt;
-        hard180 = 0.5 * B1_area180* hard180 /hard180_area;
+        hard180 = 0.52 * B1_area180* hard180 /hard180_area;
         B1pulse = hard180;        
         B1seg_len = round(hard180_dur /dt/Nsegs);
 end
@@ -244,7 +247,11 @@ for n=1:Nsegs-1
     if strcmp(base_pulse,'sinc_mod_90')
         B1seg(:) = mean(B1seg);
     end
-        
+
+    if strcmp(base_pulse,'sinc_mod')
+        B1seg(:) = mean(B1seg);
+    end
+
     B1 = [B1 ;
         B1seg;
         zeros(size(trap));
@@ -304,6 +311,13 @@ if strcmp(base_pulse, 'sinc_mod_90');
     %}
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% linear phase to shift the target velocity
+phs0 = angle(B1);
+t = [0:length(B1)-1]*dt;
+phsvel = gambar*vel_target*cumsum(Gz(:).*t(:))*dt;
+B1sel = B1 .* exp(-1i*phsvel);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % control case:
 if isControl
     Gz = abs(Gz);
@@ -313,14 +327,12 @@ end
 if exportPulses
 % write pulses to put on the scanner
     genScannerPulses(B1, Gz, dt);
-    convert_VSI2prep_pulses(length(B1)/4)
+    convert_VSI2prep_pulses(length(B1)/4 , 1)
 end
 
-% get a little bit more tip!
-B1 = B1 *1.02;
 
-Bx = real(B1);
-By = imag(B1);
+Bx = real(B1sel);
+By = imag(B1sel);
 
 NSTEPS = length(B1);
 
@@ -353,6 +365,9 @@ end
 
 % now do the control case
 %
+
+Bx = real(B1);
+By = imag(B1);
 
 for vel = vel_range  % cm / msec
     
@@ -390,7 +405,7 @@ if batch_mode==0
     ylabel('B_1 amplitude (mG)')
     
     subplot(313)
-    area(t, angle(B1));
+    area(t, angle(B1sel));
     grid on
     xlabel('time (ms)')
     ylabel('B_1 phase (rad)')
@@ -399,7 +414,7 @@ if batch_mode==0
     hold on
     plot(vel_range*1e3, Mzfinal)
     plot(vel_range*1e3, Mzfinal_ns)
-    axis([min(vel_range)*1e3 max(vel_range)*1e3, 0 1])
+    axis([min(vel_range)*1e3 max(vel_range)*1e3, -1 1])
     fatlines
     grid on
     xlabel('Velocity (cm/s)')
@@ -414,7 +429,9 @@ if batch_mode==0
 end
 
 delta = Mzfinal - Mzfinal_ns;
+figure(5)
 plot(vel_range*1e3, delta)
+title('Signal change')
 
 % figure out a cut-off velocity:  50% of greatest labeling
 c_ind = find(delta > max(delta)*0.5);

@@ -19,9 +19,11 @@ if controltype==0
 else
 	grad = [grad abs(grad)];
 end
-rho_str=['prep' num2str(pulselen) '.rho.txt'];
-th_str=['prep' num2str(pulselen) '.theta.txt'];
-grad_str=['prep' num2str(pulselen) '.grad.txt'];
+
+mkdir(num2str(pulselen))
+rho_str=['./' num2str(pulselen) '/rho.txt'];
+th_str=['./' num2str(pulselen) '/theta.txt'];
+grad_str=['./' num2str(pulselen) '/grad.txt'];
 
 save(rho_str,"rho", '-ascii');
 save(th_str,"theta", '-ascii');

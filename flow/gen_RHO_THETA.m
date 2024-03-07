@@ -1,6 +1,6 @@
 dacmax = hex2dec('7ffe');
 
-NPOINTS = 50;
+NPOINTS = 250;
 rf1 = hanning(NPOINTS);
 tmp = abs(rf1);
 tmp = tmp * dacmax / max(tmp);

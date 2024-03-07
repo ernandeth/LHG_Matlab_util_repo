@@ -40,7 +40,6 @@ parms.f=          0.015;
 parms.cbva =      0.02 ;
 parms.bat =       0.15 ;
 parms.Mtis0 =     1 ;
-parms.flip =      deg2rad(90) ; % flip angle in radians
 parms.r1tis =     0.7  ;
 parms.r2tis =     11 ;
 parms.b1err =       0;
@@ -49,8 +48,8 @@ parms.b1err =       0;
 if nargin==0
     % Set pulse sequence parameters
     Nframes = 20;
-    aq_parms.label_type =    'BIR8inv'; %'FTVSI-sinc'; % 'BIR8inv'; % 'BIR8'
-    aq_parms.RO_type =       'FSE'; %'FSE';   % 'GRE'
+    aq_parms.label_type =    'BIR8'; %'FTVSI-sinc'; % 'BIR8inv'; % 'BIR8'
+    aq_parms.RO_type =       'GRE'; %'FSE';   % 'GRE'
     aq_parms.t_tags =        0;% 0.1*ones(Nframes,1);
     aq_parms.del1 =          0.5*ones(Nframes, 1);
     aq_parms.del2 =          0.2 + 1.2*abs(sin(linspace(0.1,pi*2,Nframes)))';
@@ -62,24 +61,21 @@ if nargin==0
     aq_parms.doArtSup(1)=    0;
     aq_parms.t_aq =          0.750 ;  % duration of the whole readout
 
-aq_parms = read_timing_files('./')
+    aq_parms = read_timing_files_asl3dflex('./')
+    aq_parms.flip =      deg2rad(30) ; % flip angle in radians
     
 % Relaxation parms from user input
     Rparms(1)= parms.r1tis;
     Rparms(2) = parms.r2tis;
     Rparms(3) = parms.b1err;
 
-    if(aq_parms.RO_type=='GRE')
-        parms.flip = deg2rad(20);
-    end
-
     % generate test data
     doSub = 0;
-    dofigs = 1;
+    dofigs = 0;
     %data = gen_signals_vs_230718(parms, aq_parms, dofigs,doSub);
     data = gen_signals_vs_230918(parms, aq_parms, dofigs,doSub);
     
-    timeseries = data + 0.002*randn(size(data)) + 0.01*sin(linspace(-2,4,length(data)));
+    timeseries = data + 0.002*randn(size(data)) + 0.0001*sin(linspace(-2,4,length(data)));
     showFit = 1;
 
 end
@@ -104,9 +100,9 @@ timeseries = data + 0.01*randn(size(data));
 timeseries = timeseries/norm(timeseries);
 
 % set up the estimation problem
-guess0= [0.01  0.01  0.05];%  typical cbf, cbva, bat 
-lb =    [0.001  0.0   0.01];
-ub =    [0.05   0.1   0.5]; 
+guess0= [0.01  0.0  0.05];%  typical cbf, cbva, bat 
+lb =    [0.00  0.00  0.0001];
+ub =    [0.05  0.05  0.5]; 
 
 opts = optimoptions(@lsqnonlin);
 
@@ -114,10 +110,11 @@ opts = optimoptions(@lsqnonlin);
 opts.SubproblemAlgorithm="cg";
 % opts.FiniteDifferenceStepSize = 1e-8;
 % %opts.MaxFunctionEvaluations = 1e3;
-% opts.OptimalityTolerance = 1e-8;
-% opts.FunctionTolerance = 1e-8;
-% opts.StepTolerance = 1e-8;
+opts.OptimalityTolerance = 1e-8;
+opts.FunctionTolerance = 1e-8;
+opts.StepTolerance = 1e-8;
 opts.FiniteDifferenceType ='central';
+opts.Display='off';
 
 if showFit
     opts.Display = "iter-detailed";
@@ -128,10 +125,12 @@ end
     guess0, ...
     lb,ub, opts);
 %}
+%
 [est R] = fmincon(@(guess)myfun...
     (guess, aq_parms, parms, showFit, timeseries), ...
     guess0, [],[],[],[],...
     lb,ub);
+%}
 cbf = est(1);
 cbv = est(2);
 bat = est(3);
@@ -170,10 +169,15 @@ synthdata = gen_signals_vs_230918(parms, aqparms, 0, doSub);
 % How to scale the data??
 synthdata = synthdata/norm(synthdata);
 
-%res =(data-synthdata).^2  ;  %  <--- good for synthetic data
+%res = (data-synthdata).^2; 
 
-% in fmincon you can specify the exact cost function
-res = norm(data-synthdata)^2  +  1e-5*norm(data-synthdata,1);
+% in fmincon you can specify the exact cost function;/norm(data)
+res = norm(data-synthdata)^2 +  1e-3*norm(data-synthdata,1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Test:  clip the beginning...?
+%res = norm(data(11:end)-synthdata(11:end))^2 ;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % res = diff(res);  %<---- very brute force highpass filter
 % res = data .* synthdata';  % looking for a dictionary match by pattern

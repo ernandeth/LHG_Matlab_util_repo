@@ -1,21 +1,10 @@
-function result= quick_mrf_sensitivity(timing_parms)
-% function result= quick_mrf_sensitivity(timing_parms)
+function result= quick_mrf_sensitivity(timing_parms, parms)
+% function result= quick_mrf_sensitivity(timing_parms, parms)
 %
 % Now test the schedule's sensitivity by varying one parameter at a tim
 % we cut them in half.
 %
 
-parms.Mtis0 =     1 ;
-parms.Disp =      40;
-parms.r1blood = 1/1.7;
-
-parms.f =       0.01;
-parms.cbva =    0.01;
-parms.bat =     0.1;
-parms.r1tis =   1/0.9;%1.4;
-parms.flip =    deg2rad(40);
-parms.r2tis=    1/0.090;
-parms.b1err = 0;
 
 doSub = 0;
 
@@ -24,7 +13,7 @@ for n=1:5
     switch(n)
         case 1
             str = 'CBF'
-            parms2.f = parms.f/22;
+            parms2.f = parms.f*2;
         case 2
             str = 'CBV'
             parms2.cbva = parms.cbva*2;
@@ -44,44 +33,55 @@ for n=1:5
         %gen_signals_vs_230321(parms, ...
 
     test_signal = abs(single(...
-        gen_signals_vs_230718(parms, ...
+        gen_signals_vs_230918(parms, ...
         timing_parms, ...
         0, doSub, 1e-3)));
 
         %gen_signals_vs_220421(parms2,...
         %gen_signals_vs_230321(parms2,...
     test_signal2 = abs(single(...
-        gen_signals_vs_230718(parms2, ...
+        gen_signals_vs_230918(parms2, ...
         timing_parms,...
         0,doSub, 1e-3))); 
     
         figure(2)
     
     
-    rms = mean(abs((test_signal-test_signal2)./(test_signal))) ;
+    nrms = norm(test_signal-test_signal2) / mean(test_signal) ;
     
   
-    subplot(5,2,2*n-1)
+    subplot(5,3,3*n-2)
     plot(test_signal); hold on;
     plot(test_signal2); hold off
     title(str)
     
-    subplot(5,2,2*n)
-    plot( (test_signal-test_signal2)/norm(test_signal) )
+    subplot(5,3,3*n-1)
+    plot( (test_signal-test_signal2) )
     title(sprintf('NRMS change  : %0.2e',...
-        rms));
-    
+        nrms));
+
+    subplot(5,3,3*n)
+    plot(test_signal(1:2:end)-test_signal(2:2:end))
+    hold on
+    plot(test_signal2(1:2:end)-test_signal2(2:2:end) )
+    title('Pairwise diffs (time)')
+    hold off
+
+   subplot(5,3,3*n)
+   plot(abs(fftshift(fft(test_signal-test_signal2))));
+   title('FFT of change')
+
     switch(n)
         case 1
-            result.df = rms;        
+            result.dSdf = nrms;        
         case 2
-            result.dcbva = rms;
+            result.dSdcbva = nrms;
         case 3
-            result.bat = rms;        
+            result.dSdbat = nrms;        
         case 4
-            result.r1tis = rms;
+            result.dSdr1tis = nrms;
         case 5
-            result.r2tis = rms;
+            result.dSdr2tis = nrms;
     end
    
     total_duration = ...
@@ -90,4 +90,6 @@ for n=1:5
         + sum(timing_parms.del3(:))...
         + sum(timing_parms.RO_time(:))
 end 
-    
+   
+[total_duration result.dSdf result.dSdcbva result.dSdbat result.dSdr1tis result.dSdr2tis] 
+

@@ -10,12 +10,14 @@ isControl = 0;
 T1 = 1700;  %ms
 T2 = 165;   %ms  from Qin paper
     
+gambar = 42.576*2*pi; % rad/s/T
+
 % T1 = 1400;
 % T2 = 110;
 
 homogeneity = 'perfect'; % 'perfect'  % 'bad_B0_B1'
 refocus_scheme = 'MLEV'; % 'MLEV' % 'DR180'
-base_pulse =  'sinc_mod'   % 'sinc'  % 'hard'; % sech, hard, BIR
+base_pulse =  'sinc_mod'; %'han' %'sinc_mod'   % 'sinc'  % 'hard'; % sech, hard, BIR 
 
 batch_mode = 0;
 exportPulses = 0;
@@ -107,7 +109,18 @@ switch base_pulse
         mySinc =  B1_area180 * mySinc / mySinc_area;
         B1pulse = mySinc;
         B1seg_len = round(mySinc_dur /dt/Nsegs);
+       
+    case 'han'
         
+        myHan_dur = 0.5; %ms  
+
+        myHan_dur = round(myHan_dur/dt/Nsegs) * Nsegs*dt; % ms
+        myHan = hanning(myHan_dur/dt)' ;
+        myHan_area = (sum(myHan) * dt);
+        myHan =  B1_area180 * myHan / myHan_area;
+        B1pulse = myHan;
+        B1seg_len = round(myHan_dur /dt/Nsegs);
+             
     case 'BIR'
         myBIR_dur = 3; % ms
         myBIRpulse = genBIRpulse(0.2 , myBIR_dur)';
@@ -146,9 +159,8 @@ end
 % refocuser pulse is 180 hard pulse for 0.8 ms
 B1ref_dur = 0.8;   % ms
 B1ref_dur = 1.0;   % ms   - 12360
-if base_pulse =='sinc_mod'
-    B1ref_dur = 0.5;   % ms  - 16900 pulse and 17280
-end
+B1ref_dur = 0.5;   % ms  - sinc_mod and han 
+ 
 B1ref_len = B1ref_dur/dt;  % points
 B1ref_max = (1/B1ref_dur)* 0.1175e-4; % Tesla ... amplitude of 1 ms hard 180
 B1ref = B1ref_max * ones(B1ref_len,1) ; % * exp(i*pi/2);
@@ -207,8 +219,13 @@ B1 = [];
 for n=1:Nsegs-1
     B1seg = B1pulse(1 + B1seg_len*(n-1) : n*B1seg_len);
     
-    if base_pulse=='sinc_mod'
+    if strcmp(base_pulse,'sinc_mod')
         B1seg(:) = mean(B1seg);
+    end
+
+    if strcmp(base_pulse,'han')
+        B1seg(:) = mean(B1seg);
+        B1seg = B1seg(:);
     end
         
     B1 = [B1 ;
@@ -244,7 +261,7 @@ Gz = [
     ];
 
 B1seg = B1pulse(1 + B1seg_len*(Nsegs-1) : Nsegs*B1seg_len);
-
+B1seg = B1seg(:);
 B1 = [
     B1;
     B1seg;
@@ -263,18 +280,27 @@ B1 = [B1;
     ];
 %}
 
-% control case:
-if isControl
-    Gz = abs(Gz);
-end
 
 if exportPulses
 % write pulses to put on the scanner
     genScannerPulses(B1, Gz, dt);
 end
 
-Bx = real(B1);
-By = imag(B1);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% linear phase to shift the target velocity
+vel_target = 5;
+phs0 = angle(B1);
+t = [0:length(B1)-1]*dt;
+phsvel = gambar*vel_target*cumsum(Gz(:).*t(:))*dt;
+B1sel = B1 .* exp(-1i*phsvel);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% control case:
+if isControl
+    Gz = abs(Gz);
+end
+
 
 NSTEPS = length(B1);
 
@@ -291,7 +317,10 @@ for vel = vel_range  % cm / msec
     Bz = zpos.*Gz ;
     
     Bz = Bz + off_resonance;
-        
+    
+    Bx = real(B1sel);
+    By = imag(B1sel);
+
     beff = [Bx By  Bz];
     Mi = [0 0 1]';
     M = blochsim(Mi, beff, T1, T2, dt, NSTEPS);
@@ -311,7 +340,9 @@ for vel = vel_range  % cm / msec
     Bz = zpos.*abs(Gz) ;
 
     Bz = Bz + off_resonance;
-        
+    Bx = real(B1);
+    By = imag(B1);
+    
     beff = [Bx By  Bz];
     Mi = [0 0 1]';
     M = blochsim(Mi, beff, T1, T2, dt, NSTEPS);
@@ -342,7 +373,10 @@ if batch_mode==0
     ylabel('B_1 amplitude (mG)')
     
     subplot(313)
-    area(t, angle(B1));
+    plot(t, angle(B1sel));
+    hold on
+    plot(t, angle(B1));
+    hold off
     grid on
     xlabel('time (ms)')
     ylabel('B_1 phase (rad)')

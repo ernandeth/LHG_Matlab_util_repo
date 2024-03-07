@@ -4,6 +4,9 @@ function [interped_data interped_data_gd dens] = GrappaNet_interpolate(allCoilNe
 %
 % (c) Luis Hernandez-Garcia @University of Michigan 2022
 %
+% This version tries to compute all the coils together using a single
+% network (2023.10.22)
+%
 % Interpolate cartesian data (targets) from
 % non-cartesian data (neighbors) using a neural net.
 %
@@ -20,10 +23,12 @@ function [interped_data interped_data_gd dens] = GrappaNet_interpolate(allCoilNe
 % It was trained from fully sampled data in a calibration region.
 % The network's inputs are the relative locations
 % of the interpolation neighbors, the output is the weight for each
-% neighbor and each coil.
+% neighbor and each coil. 
+% 
+% 2023.01.02 The training is done in non-cartesian data
 %
 %   INPUTS:
-%   allCoilNets :  a cell array with the networks.  One network per coil.
+%   allCoilNets :  a cell array with the networks.  One network FOR ALL coils.
 %   ks          : [kx, ky, kz] is the trajectory in k-space (cm^-1)
 %   signal      : is the signal at each of those ks locations :
 %                               (Npts*Nechoes) x Ncoils
@@ -44,7 +49,7 @@ ks(z,:) = [];
 signal(z,:) = [];
 
 % STEP 1: set up the cartesian grid and figure out the neighbors
-Nnbrs = allCoilNets{1}.Layers(1).InputSize(1);
+Nnbrs = allCoilNets.Layers(1).InputSize(1);
 Ncoils = size(signal,2);
 Nsamples = size(signal,1);
 
@@ -71,7 +76,7 @@ dim = dim/4;
 Npix = dim(1)*dim(2)*dim(3);  % dimensions of ouput data
 
 interped_data = zeros(Npix, Ncoils);  % Cartesian kspace data for all coils
-dens = zeros(Npix,1);           % sampling density
+dens = zeros(Npix,1);                 % sampling density
 
 % Cartesian kspace data for all coils (for comparison purposes, this is interpolated with griddata)
 interped_data_gd = zeros(Npix, Ncoils);
@@ -128,7 +133,8 @@ for p = 1:Npix % dim(1)*dim(2)*dim(3)/2 + dim(1)*dim(2)/2 + dim(1)/2   % 1:Npix
     %         end
 
     % STEP 2 - identify neighbors for interpolation :
-    % first find distances from target voxels (cartesian gris) to all sample locs
+    % first find distances from target voxels (cartesian grid) to all 
+    % (noncartesian) sample locs
     % and then consider only those that are close enough (<Rmax)
     parfor n=1:Nsamples
         dist(n) = sqrt(...
@@ -148,54 +154,55 @@ for p = 1:Npix % dim(1)*dim(2)*dim(3)/2 + dim(1)*dim(2)/2 + dim(1)/2   % 1:Npix
         %fprintf('\rNo neighbors at %f %f %f    :( ', xc(p), yc(p), zc(p));
     else
         % Choose a random set of Nnbrs to make an interpolation 'patch'
-        tmp = randi(length(nbr_inds), Nnbrs,1);
-        inds = nbr_inds(tmp);
+%         tmp = randi(length(nbr_inds), Nnbrs,1);
+%         inds = nbr_inds(tmp);
 
         % ... OR ... Choose the closest points to make an interpolation patch
-        %[dist inds] = sort(dist);
-        %inds = inds(1:Nnbrs);
+        [dist inds] = sort(dist);
+        inds = inds(1:Nnbrs);
 
-        patch_data = signal(inds,:); % size Nnbrs x Ncoils (complex)
-        % patch_data = patch_data';  % Need this ?  Answer: don't do this
-        patch = patch_data(:);
+        patch_data= signal(inds,:); % size Nnbrs x Ncoils (complex)
+        patch = patch_data(:)';
 
         % Now calculate locations of neighbors RELATIVE to the target
         % for this patch
         nbrlocs(:,:,1) = [ ks(inds,1)-xc(p) ,  ks(inds,2)-yc(p) ,   ks(inds,3)-zc(p)];
 
-        dens(p) = mean(vecnorm(nbrlocs,2,2));
+        %dens(p) = mean(vecnorm(nbrlocs,2,2));
 
         % STEP 3: compute the interpolation weights using the network
         % Use the neural net to produce the corresponding COMPLEX weights:
         % (the output of the network has all the reals followed by  the
         % imaginaries - must merge into complex numbers)
-        for coilnum=1:Ncoils
-            % choose the right net for each channel and use it to calculate
-            % the interp. weights
-            mynet = allCoilNets{coilnum};
-            
-            %W = predict(mynet , nbrlocs);
 
-            gpuNbrlocs = gpuArray(nbrlocs);
+        % choose the right net for each channel and use it to calculate
+        % the interp. weights
+        mynet = allCoilNets;
 
-            W = predict(mynet , gpuNbrlocs);
-            W = complex(W(1:end/2), W(end/2+1:end));
+        %W = predict(mynet , nbrlocs);
 
-            % debugging - how does it look if they have equal weight?
-            %W = ones(1,length(patch));
+        gpuNbrlocs = gpuArray(nbrlocs);
 
-            % W = W/norm(W);  % should I normalize the weights? - NO .
-            % Makes things worse
+        W = predict(mynet , gpuNbrlocs);
+        W = complex(W(1:end/2), W(end/2+1:end));
 
-            % STEP 4: Interpolate the signals at the desired Cartesian location
-            % as a weighted sum of the neighbors at each coil
-            interped_data(p,coilnum) = W*patch;
+        % reshape the Weights into the original size:
+        % [ Nnbrs*Ncoils  x  Ncoils]
+        W = reshape(W, [ Nnbrs*Ncoils ,  Ncoils]);
 
-        end  % coil loop
-        
+        % debugging - how does it look if they have equal weight?
+        %W = ones(1,length(patch));
+
+        % W = W/norm(W);  % should I normalize the weights? - NO .
+        % Makes things worse
+
+        % STEP 4: Interpolate the signals at the desired Cartesian location
+        % as a weighted sum of the neighbors at each coil
+        interped_data(p,:) = patch*W;
+
         %
         if mod(p,1e3)==0
-            fprintf('\r\t\tCoil %d Kvoxel %d of %d', coilnum, p, Npix);
+            fprintf('\r\t\tKvoxel %d of %d',  p, Npix);
             %
             subplot(221)
             hold off
@@ -212,22 +219,22 @@ for p = 1:Npix % dim(1)*dim(2)*dim(3)/2 + dim(1)*dim(2)/2 + dim(1)/2   % 1:Npix
             legend('weights', 'signal');
 
             subplot(223)
-            lightbox(reshape(log(dens), dim));
-            title('Density (log)')
+            lightbox(reshape((dens), dim));
+            title('Density ()')
 
             subplot(224)
             lightbox(reshape(log(abs(interped_data(:,5))), dim));
             title('coil 5 Kspace data (log)')
 
             % whos W patch
-            
+            nbrlocs
 
             drawnow
             %}
 
             %}
-        end % IF  ecerty 1e3 voxels : display results 
-    end % do calculations if there are enout neighbors
+        end % Every 1e3 voxels : display results
+    end % do calculations if there are enough neighbors
 end  % kvoxel loop
 
 clear mynet

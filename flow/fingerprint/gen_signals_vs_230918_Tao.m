@@ -1,4 +1,10 @@
-function  [obs Ma] = gen_signals_vs_230918(parms, aq_parms, dofigs, doSub, dt)
+function  [obs,Ma] = ...
+    gen_signals_vs_230918_Tao(...
+    parms,delays,adjusts,labelcontrols,...
+    doArtSups,ArtSup_delays,aq_parms,dofigs,...
+    doSub,dt,FrameEnd,eTE_ftvsi)
+
+% parms, aq_parms, dofigs, doSub, dt
 % this version is modified to agree with the timings of the new pulse
 % sequence asl3dflex
 % it also considers the effect of multiple pulses on the arterial
@@ -7,33 +13,35 @@ function  [obs Ma] = gen_signals_vs_230918(parms, aq_parms, dofigs, doSub, dt)
 % dispersion)
 
 % constants
-if nargin<5
+if nargin<10||isempty(dt)
     dt = 1e-3;      % seconds
     %dt = 5e-3;
     %dt = 0.01;      % seconds
 end
 
+Muldt = 1/dt;
 r1a = 1/1.67;
+
 lambda = 0.9;
-tissDensity=1.05;
 r2art  = 1/0.150 ;
 
-eTE_ftvsi = 0.0313;     % effective echo time of FT-VSI sinc-pulse
+if (~exist('eTE_ftvsi','var') ) || isempty(eTE_ftvsi)
+    eTE_ftvsi = 0.0313;     % effective echo time of FT-VSI sinc-pulse
+end
+
 eTE = 0.0207;           % effective echo time of sBIR8-VSS pulse
 
-BGS0_length = round(2.5e-3 /dt); % (s)  duration of the global saturation pulse - magnetization reset.
-BGS0_length = round(6.4e-3 /dt); % (s)  duration of the global saturation pulse - magnetization reset.
-BGS0_length = 0;   % did not use bulk saturation
+%BGS0_length = round(2.5e-3*Muldt); % (s)  duration of the global saturation pulse - magnetization reset.
 
 if (nargin ==0)
     % for testing purposes, here are some default tissue parameters:
     % Tissue parms:
     f=          0.01 ;
     cbva =      0.02;
-    bat =       0.1 ;
+    bat =       0.001;%0.2 ;
     r1tis =     1/1.4  ;
     Mtis0 =     1 ;
-    flip =      50*pi/180 ; % flip angle in radians
+    flip =      20*pi/180 ; % flip angle in radians
     r2tis =     1/0.090 ;
 
     % include a B1 error term in the labeling pulses
@@ -50,13 +58,14 @@ if (nargin ==0)
     label_type =    'BIR8inv'; %'FTVSS'; %'FTVSI-sinc'; % 'BIR8inv'; % 'BIR8'
     RO_type =       'GRE'; %'FSE';   % 'GRE'
     t_tags =        0;% 0.1*ones(Nframes,1);
-    del1 =          2*ones(Nframes, 1);
-    del2 =          1.2*ones(Nframes,1);
-    del3 =          0.15*ones(Nframes,1);  % delay between AS pulse and acqusition
+    t_adjusts =         2*ones(Nframes, 1); % del1
+    t_delays =          1.2*ones(Nframes,1); % del2
+    ArtSup_delay =   0.05*ones(Nframes,1);  % del3delay between AS pulse and acqusition
+    
     labelcontrol =  zeros(Nframes,1);
     labelcontrol(2:2:end)= 1;
-    labelcontrol(1:2) =   -1;
-    order =         1;
+    %labelcontrol(1:2) =   -1;
+    order =         2;
     doArtSup =      ones(Nframes,1);
     %doArtSup(end/2+1:end)= 0;
     %doArtSup(1:2)=    0;
@@ -67,56 +76,118 @@ if (nargin ==0)
     %}
     Ma = [];
 
+    %RO_time = 0.750 ;  % duration of the whole readout
     Nkz = 1;
    RO_time = 0.03*Nkz;
  
 else
-    Nkz = 1;
+
+    if isfield(parms,'Nkz')
+        Nkz = parms.Nkz;
+    else
+        Nkz = 1;% 18; % Luis changed 19th Apr.  18->16
+    end
 
     % pulse sequence parms:
-%    t_tags =        aq_parms.t_tags;  % zero if you have a single pulse
-    t_tags(:) =     0;  % <---- no t_tag in the new sequence
-    del1 =          aq_parms.del1;
-    del2 =          aq_parms.del2;
-    del3 =          aq_parms.del3 ; % delay between AS pulse and acqusition
-    labelcontrol =  aq_parms.labelcontrol;
-    label_type =    aq_parms.label_type;
+    if isempty(delays)
+        t_delays = aq_parms.t_delay;
+    else
+        t_delays = delays;
+    end
+
+    if isempty(adjusts)
+        t_adjusts = aq_parms.t_adjust;
+    else
+        t_adjusts = adjusts;
+    end
+
+    if isempty(labelcontrols)
+        labelcontrol = aq_parms.labelcontrol;
+    else
+        labelcontrol = labelcontrols;
+    end
+
+    if isempty(doArtSups)
+        doArtSup = aq_parms.doArtSup;
+    else
+        doArtSup = doArtSups;
+    end
+
+    if isempty(ArtSup_delays)
+        ArtSup_delay = aq_parms.ArtSup_delay;
+    else
+        ArtSup_delay = ArtSup_delays;
+    end
+
+     if isfield(aq_parms,'t_tags')
+        t_tags = aq_parms.t_tags;  % <---- no t_tag in the new sequence
+    else
+        t_tags = 0;
+     end
+   
     order =         aq_parms.order;
-    doArtSup =      aq_parms.doArtSup;
-    RO_time =       aq_parms.t_aq(1);
-    RO_type =       aq_parms.RO_type;
-    flip =          aq_parms.flip;
+    RO_time =      aq_parms.t_aq;
+    label_type =    aq_parms.label_type;
+    RO_type    =       aq_parms.readout_type;
+
+%     if isfield(aq_parms,'ArtSup_Type')
+%         ArtSup_Type = aq_parms.ArtSup_Type;
+%     else
+%         ArtSup_Type = 'BIR8';
+%     end
 
     if isfield(aq_parms, 'Ma')  % maybe the input function is already precomputed.
         Ma = aq_parms.Ma;
     else
         Ma=[];
     end
-
+   
     % Tissue parms
     f = parms.f;
-    Mtis0 = parms.Mtis0;
+    if isfield(aq_parms,'Mtis0')
+        Mtis0 = aq_parms.Mtis0;
+    else
+        Mtis0 = 1;
+    end
     cbva = parms. cbva;
     bat =  parms.bat;
     r1tis =  parms.r1tis;
+    flip =  parms.flip;
     r2tis = parms.r2tis;
 
     % include a B1 error term in the labeling pulses
     % 0 error means multiplying by 1.
     % 1% error mean multiplying by 1.01
-    b1err = parms.b1err;
+    
+    % add B1 error parameter
+    if isfield(parms, 'b1err')
+        b1err = parms.b1err;
+    else
+        b1err = 0;
+    end
 
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
+b1err = b1err+1;
+del1 = t_adjusts;
+del2 = t_delays;
+del3 = ArtSup_delay;
 
+% if strcmp(label_type,'FTVSI_sinc')
+%     Pulse_delay = 0.069072;
+% elseif strcmp(label_type,'BIR8inv')
+%     Pulse_delay = 0.0272;
+% end
+% Label_delay = round(Pulse_delay*Muldt)/Muldt;
+% BIR_delay = 0.0274;
+% BIR_delay = round(BIR_delay*Muldt)/Muldt;
+
+if nargin<=10||isempty(FrameEnd)
+    FrameEnd = length(t_delays);
+end
 
 % Translate labeling error (B1err) into a scaling factor
-b1err= b1err +1;
-
-% Apply flip angle error factor
-flip = flip*b1err;  
-
+% b1err= b1err +1; % never used that we comment this.
 % check the order.  The 'order' flag is a quick way to reverse the order
 % ie - VS becomes non-VS and non-VS becomes VS
 tmplabelcontol= labelcontrol;
@@ -124,10 +195,15 @@ if order==2  %  2023.08.08....original should be  2 (just checking to see if the
     tmplabelcontrol(labelcontrol==0) = 1;
     tmplabelcontrol(labelcontrol==1) = 0;
     tmplabelcontrol(labelcontrol==-1) = -1;
-
     labelcontrol = tmplabelcontrol;
 end
 
+% rounding units
+%t_tags = round(Muldt*t_tags)/Muldt;
+del1 = round(Muldt*del1)/Muldt;
+del2 = round(Muldt*del2)/Muldt;
+del3 = round(Muldt*del3)/Muldt;
+RO_time = round(Muldt*RO_time)/Muldt;
 
 %------
 % calculate effects of VS pulses given tissue T2
@@ -147,15 +223,12 @@ T2loss_art_ftvss = exp(-eTE_ftvsi*r2art);
 switch(label_type)
     case 'BIR8inv'
         % if the first pulse is  BIR8-inv : inversion efficiency with  T2 effects
-        % tissue gets inverted too:  M(n) =  M(n-1) * alpha1_tis_sel;
+        % tissue gets inverted too:  M(n) =  M(n-1) * (-alpha1_tis_sel);
         %
         alpha1_tis_sel  = -T2loss_bir8;
         alpha1_tis_ns   = -T2loss_bir8;
-
-        % artery input function does this:  Ma(n) =  alpha1_art_sel * bolus;
         alpha1_art_sel  = 0;
         alpha1_art_ns   = -T2loss_art_bir8;
-
         pulse1_dur    = 0.0272;
         %}
 
@@ -165,14 +238,10 @@ switch(label_type)
         %
         alpha1_tis_sel = T2loss_bir8;
         alpha1_tis_ns  = T2loss_bir8;
-        
         % artery input function does this:  Ma(n) =  alpha1_art_sel * bolus;
         alpha1_art_sel = 0;
         alpha1_art_ns  = T2loss_art_bir8;
-
         pulse1_dur    = 0.0272;
-
-
         %
     case 'FTVSI-sinc'
         % first pulse BIR8-sat : T2 effects
@@ -180,7 +249,6 @@ switch(label_type)
         %
         alpha1_tis_sel = -T2loss_ftvsi;
         alpha1_tis_ns  = -T2loss_ftvsi;
-
         % artery input function does this:  Ma(n) =  alpha1_art_sel * bolus;
         alpha1_art_sel = T2loss_art_ftvsi;
         alpha1_art_ns  = -T2loss_art_ftvsi;
@@ -200,10 +268,10 @@ switch(label_type)
 
 end
 
-pulse2_dur = 0.0272;  % always the same - BIR8
+pulse2_dur = 0.0272;
 
-pulse1_length = round(pulse1_dur/dt);
-pulse2_length = round(pulse2_dur/dt);
+pulse1_length = round(pulse1_dur*Muldt);
+pulse2_length = round(pulse2_dur*Muldt);
 
 % second pulse : T2 effects only on the tissue
 alpha2_tis_sel = T2loss_bir8;
@@ -228,36 +296,33 @@ alpha2_art_ns  = (T2loss_art_bir8);
 % alpha2_tis_ns  = alpha2_tis_ns * b1err;
 
 % bolus arrival time
-nbat = round(bat/dt);
+nbat = round(bat*Muldt);
 
-Nframes = length(del2);
+%Nframes = length(del2);
+Nframes = FrameEnd;
 obs = zeros(Nframes,1);
 
-
-% adjust the delay times from the file to account for the time it takes to
-% play the prep pulse, then we play the delay.
-% we'll make the effects of the prep pulse happen at pulse1_dur
-de1 = del1 + BGS0_length*dt;
-del2 = del2 + pulse1_dur;
-del3 = del3 + pulse2_dur;
-
-% No BGS) pulse
-
+% the VS pulses are executed by the pulse sequence in a separate core.
+% Here, we include them at the end of the first delay (t_adjust)
+% their effect is 'felt' at the end
+% del1 = del1 + pulse1_dur;
 
 TR = del1 + del2 + del3 + RO_time;
+TR = TR(1:FrameEnd);
 
 begTR = cumsum(TR);
 begTR = [0; begTR];  % beginning of each TR period
 begTR = begTR(1:end-1);
 duration = sum(TR) ;
-Npts = round((duration) / dt);
+
+Npts = round((duration)*Muldt);
 timevec = linspace(0, duration, Npts);
 
 % indicator function for  labeling pulses
-% whether the pulse is velocity selective is specified by "labelcontrol"
+% whether the pulse is velocity selectivity is specified by "labelcontrol"
 vsfun = zeros(Npts,1);
 
-inds = round((begTR + del1) /dt);
+inds = round((begTR + del1)*Muldt);
 inds = sort(inds);
 inds = inds + pulse1_length;
 
@@ -275,12 +340,12 @@ inds = inds + pulse1_length;
 tmp = zeros(size(labelcontrol));
 tmp(labelcontrol==1) = 1;
 
-vs_inds = inds(:) .* tmp(:);  % vel. selective pulse
+vs_inds = inds(:) .* tmp(:);  % vel. selective inversion
 vs_inds = inds(vs_inds>0);
 
 tmp = zeros(size(labelcontrol));
 tmp(labelcontrol==0) = 1;
-ns_inds = inds(:) .* tmp(:);  % non-selective pulse
+ns_inds = inds(:) .* tmp(:);  % non-selective inversion
 ns_inds = inds(ns_inds>0);
 
 vsfun(vs_inds) = -1;% (1-alpha_art_ns)/2;
@@ -302,9 +367,8 @@ asfun = zeros(Npts,1);
 % the arterial signal but we still get some T2 suppression on the tissue.
 tsfun = zeros(Npts,1);
 
-
 % the indices of when the AS pulses can be applied:
-inds = round((begTR + del1  + del2) /dt);
+inds = round((begTR + del1  + del2)*Muldt);
 % the AS pulse is inside the ArtSup delay core in the scanner
 % but their effect is is felt at the end of the pulse
 inds = inds + pulse2_length;
@@ -316,7 +380,7 @@ as_inds = inds .* tmp;
 as_inds = inds(as_inds>0);
 asfun(as_inds) = 1;
 
-% non- selective AS pulse: T2 effects on magnetization
+% non- selective AS pulse: T2 effects on arterial magnetization
 tmp = zeros(size(doArtSup));
 tmp(doArtSup ==0 ) = 1;  % both zeros and ones produce T2 effects
 as_inds = inds .* tmp;
@@ -325,7 +389,7 @@ asfun(as_inds) = -1;
 
 % make an indicator for the beginning of readout
 aqfun = zeros(Npts,1);
-inds = round((begTR + del1 +  del2 + del3) /dt);
+inds = round((begTR + del1 +  del2 + del3)*Muldt);
 aqfun(inds) = 1;
 
 %------------
@@ -336,13 +400,16 @@ if RO_type == 'FSE'
     flip = deg2rad(90);
 end
 
+%flip = flip*b1err;  % this doesn't seem to matter
+
 cosflip = cos(flip);  % pre-compute this once to save time
 %-------------
 
-img_time = round(RO_time / dt);  % how long it takes to collect image
+img_time = round(RO_time(1)*Muldt);  % how long it takes to collect image
 slice_time = round(img_time/Nkz);
 
 
+MM=2;
 
 % Create arterial input functions:
 %
@@ -355,16 +422,17 @@ slice_time = round(img_time/Nkz);
 % Note: at the end of each bolus, we restore the magentization with fresh spins
 % ie -  skip calculating the decay in the loop for that
 % time point and reset the label to zero instead
-bolus_duration = 2.5; % assumed bolus duration created by profile of labeling pulse
+
+bolus_duration = 3 ; % 2.5; % assumed bolus duration created by profile of labeling pulse
 % now in units of discrete samples:
-bolus_length = round(bolus_duration/dt);
+bolus_length = round(bolus_duration*Muldt);
+
 tt = linspace(0,bolus_duration, bolus_length);
 bolus = exp(-tt*r1a)';
 
-
+tt_aq = linspace(0, RO_time(1), img_time(1));  % bolus duration from imaging
 % in FSE readout,  assume that the first readout pulse saturates the arterial spins
-% but the refocusing train doesn't affect the label significantly
-tt_aq = linspace(0, RO_time, img_time);  % bolus duration produced by imaging tip pulses
+% and the refocusing train doesn't affect the label significantly
 AQbolus = exp(-tt_aq*r1a)';
 % in GRE readout, assume the readout has no effect on the label
 if RO_type=='GRE'
@@ -384,10 +452,7 @@ if isempty(Ma)
 
     last_event = 1;
     flow_time = 0;
-    kz=0;
-    start_readout=inf;
-
-    for n = 2:length(timevec)
+    for n = MM:length(timevec)
         %
         % Labeling pulses (vsfun) effect on the arterial contents:
         if vsfun(n-1) == 1  % gradients ON - velocity selective
@@ -443,27 +508,26 @@ if isempty(Ma)
         %----- test 8.2.23 (no effect from global saturation pulse on the arteries)
         %
         %----- end test code 8.2.23
-        % LHG: 2/20/2024  adapt for FSE vs. GRE
+        % LHG: 2/6/2022  adapt for FSE vs. GRE
         % Effect of the readout is that it perturbs magnetization in arteries
         % as well as the tissue.
-        if aqfun(n)==1
-            start_readout = n;  % mark the begining of the acquisition
+        % Assume that the tipdown (90) saturates the arteries
+        % but that the refocusers don't affect the Mz component.
+        % After the readout, there is a global saturation pulse.
+        % This resets the magnetization in all compartments to zero.
+        %if aqfun(n)==1
+        %         if n>img_time+1
+        %             if RO_type == 'FSE'
+        %                 % tipdown pulse saturates arteries
+        %                 Ma(n+1  : n+img_time)= 0.5 * AQbolus ;
+        %             end
+        %         end
 
-            % effect of the readout pulse
-            Ma(n) = Ma(n-1) * cosflip;
-        end
-        if  (n == start_readout + slice_time*kz)
-            Ma(n) = Ma(n) * cosflip;
-            kz = kz + 1;
-        end
-        if kz==Nkz
-            kz=0;
-        end
-
-        % BGS pulse after readout also saturates the arteries
-        %Ma(n+img_time+BGS0_length+1 : ...
-        %    n+img_time+BGS0_length + bolus_length)= 0.5 * bolus;
-
+        %         % BGS pulse after readout also saturates the arteries
+        %         Ma(n+img_time+BGS0_length+1 : ...
+        %             n+img_time+BGS0_length + bolus_length)= 0.5 * bolus;
+        %end
+        %}
 
         % Now implement Bloch equation
         dMa = (1-Ma(n))*r1a;
@@ -476,9 +540,8 @@ if isempty(Ma)
     end
 end
 
-% scale to match the spin density
-Ma = Ma*Mtis0;
 
+%Ma = Ma2;
 doDispersion = 1;
 if doDispersion
 
@@ -494,8 +557,12 @@ else
     Ma_ex = Ma;
 end
 % scale to include T1 decay:
-%Ma_ex = Ma_ex/max(Ma_ex) ;%* max(Ma)*exp(-bat*r1a);
+Ma_ex = Ma_ex/max(Ma_ex) ;%* max(Ma)*exp(-bat*r1a);
 
+% convert from to concentration to Magnetization
+%Ma_ex = 1-2*Ma_ex;
+%Ma = 1-2*Ma;
+%Ma = Ma_ex;
 
 
 % Tissue Magnetization time courses
@@ -504,7 +571,7 @@ M = ones(Npts, 1);
 
 aq = 1;
 Ma0 = Ma(1);
-start_readout = inf;
+start_readout = 0;
 kz = 0;
 batcount = 1;
 start_readout = inf;
@@ -518,7 +585,6 @@ aqfun = [aqfun; zeros(round(del3(end)/dt),1)];
 del3 = [del3;del3(end)];
 aqfun_plot = aqfun;
 
-MM=2; %0.5/dt;
 
 for n = nbat+MM+1:length(timevec)
 
@@ -531,32 +597,49 @@ for n = nbat+MM+1:length(timevec)
     %dMa = (Ma0 - Ma(n-1))*r1a ;
     %Ma(n) = Ma(n-1) + dMa*dt;
 
+    % considering a flow through compartment:
+    % blood in artery at exchange site separately:
+    % same thing, but has BAT lag (see below)
+    % dMa_ex = (Ma0 - Ma_ex(n-1))*r1a ;
+    % Ma_ex(n) = Ma_ex(n-1) + dMa_ex*dt;
+    %
+    % OR ...
+    % the contents of the Ma compartment feed into the exchange compartment
+    % with a delay. This also means some more T1 decay before it can
+    % exchange
+
+    %S =  Ma(n-nbat);
+    %S =  mean(Ma(n-nbat-MM:n-nbat+MM));
+
+    %Ma_ex(n) = Ma0-(Ma0-S)*exp(-bat*r1a);
+
     % the modified Bloch equation has
     % t1 decay, , inflow, outflow
-   
     % dM = (Mtis0 - M(n-1))*r1tis  + f * Ma_ex(n-1) - f * M(n-1)/lambda;
-    dM = (Mtis0 - M(n-1))*r1tis  + f * Ma_ex(n-1);
-
+    dM = (Mtis0 - M(n-1))*r1tis  + f * Ma_ex(n-1) - f * M(n-1)/lambda;
     M(n) = M(n-1) + dM*dt;
 
+    %     MM=5;
+    %     S = [M(n-MM:n-1)]' * [1:MM]'/sum(1:MM);
+    %     M(n) = S + dM*dt;
+
     %%%%%%%%%%%%%%%%%%%
-    % update the Tissue and Arterial Compartments when  pulses are
+    % update the Tissue and Arterial Compartments when the pulses are
     % applied
     %%%%%%%%%%%%%%%%%%%
-
     % selective pulse
     if vsfun(n-1) == 1
-        M(n-pulse1_length:n) =  M(n-pulse1_length) * alpha1_tis_sel;
+        M(n) =  M(n) * alpha1_tis_sel;
     end
     % non-selective pulse
     if vsfun(n-1) == -1
-        M(n-pulse1_length:n) =  M(n-pulse1_length) * alpha1_tis_ns;
+        M(n) =  M(n) * alpha1_tis_ns;
     end
 
     % T2 effects from the arterial selective saturation pulse
     % whether the crusher gradients are on or not.
     if asfun(n-1) ~= 0
-        M(n - pulse2_length:n) =  M(n-pulse2_length) * (alpha2_tis_ns); % T2 effect only : no inversion
+        M(n) =  M(n) * (alpha2_tis_ns); % T2 effect only : no inversion
     end
 
     %%%%%%%%%%%%%%%%%%%%%%
@@ -567,11 +650,11 @@ for n = nbat+MM+1:length(timevec)
         % the observed signal on the xy plane:  Tissue + Blood compartments
 
         % LHG 4/17/23 - added the missing abs()
-        obs(aq) = abs( (1-cbva) * tissDensity * M(n-1)*sinflip + cbva*Ma(n-1) * sinflip);
+        obs(aq) = abs( (1-cbva)*M(n-1)*sinflip + cbva*Ma(n-1) * sinflip);
 
-        obs_t(aq) = M(n-1) * sinflip;
-        obs_a(aq) = Ma(n-1)* sinflip;
-        
+        obs_t(aq) = M(n-2) * sinflip;
+        obs_a(aq) = Ma(n-2)* sinflip;
+
         aq = aq +1;
         start_readout = n;  % mark the begining of the acquisition
 
@@ -591,14 +674,16 @@ for n = nbat+MM+1:length(timevec)
         M(n) = M(n) * cosflip;
         kz = kz + 1;
     end
+    
     if kz == Nkz
         kz = 0;
     end
 
-    %{
+%{
     % effect of global sat pulse (BGS) at end of readout: reset the magnetization
     if  (n == (start_readout + img_time + BGS0_length))
         M(n) = 0;
+        %M(n) = b1err-1;
         start_readout = 0;
     end
     %}

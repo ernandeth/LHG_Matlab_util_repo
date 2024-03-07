@@ -2,6 +2,14 @@
 % editing 9.19.2023
 % addpath /home/hernan/matlab/LHG_util_repo/kspace/DL_grappa_tests/
 
+fprintf('\nFiguring out kspace trajectory and rotations ....\n');
+
+% Process Trajectory (new)
+% Load in kspace trajectory & view transformation matrices
+ktraj = dir('ktraj*.txt');
+ktraj = load(ktraj(1).name);
+kviews = dir('kviews*.txt');
+kviews = load(kviews(1).name);
 
 fprintf('\nReading data ....');
 pfilename = dir('P*');
@@ -29,39 +37,54 @@ raw = permute(raw,[3,1,4,2,5]);
 raw = raw(1,:,:,:,:);
 nframes = 1;
 
-% T2 compensation
-%  We force the center of k-space to have the same magnitude in all echoes
+% Try T2 compensation by t adjusting the center of k-space...
+% keeping two point2 from the center 12.1.23
+% 
+
 for n=1:nframes
     for c=1:ncoils
         for s=1:nechoes
             for t=1:ntrains
+
+                % average all the data in the navigator portion of the
+                % echoes.... this actually does more harm.  why???
+                % raw(n, Nnav, s,t,c) = mean(raw(n, Nnav, s,t,c)) ;
+
+                %  We force the center of k-space to have the same magnitude in all echoes
                 raw(n, :,s,t, c) = raw(n,:,s,t, c) / (abs(raw(n,end/2,s,t,c)));
                 %plot(abs(signal2(:,s,c))); drawnow
             end
         end
     end
 end
-%
-%
 
+% remove the nav data and its coordinates :
+Nnav = ndat/2-125 : ndat/2+125 ;
+Nnav(end/2-1:end/2) = [];
+
+raw(:,Nnav,:,:,:) = [];
+ktraj(Nnav, :) = [];
+ndat  = ndat -length(Nnav);
+
+% 12/04/23 remove the last four echoes (too much decay?):
+% Bad idea
+%{
+raw(:,:,end-3:end,:,:) = [];
+nechoes = nechoes-4;
+%}
+
+%  Reshape the data so that we concatenate them into a single echo train
+%  per time frame, per coil.
 signal = reshape(raw, ndat*ntrains*nechoes , ncoils);
 %
-fprintf('\nFiguring out kspace trajectory and rotations ....\n');
-
-% Process Trajectory (new)
-% Load in kspace trajectory & view transformation matrices
-ktraj = dir('ktraj*.txt');
-ktraj = load(ktraj(1).name);
-kviews = dir('kviews*.txt');
-kviews = load(kviews(1).name);
 
 % Reshape transformation matrices as an array of 3x3 matrices
 T = permute(reshape(kviews(:,end-8:end)',3,3,[]),[2,1,3]);
-
 % Allocate space for entire trajectory
 ks = zeros(ndat,3,nechoes,ntrains);
 
-% Transform each view
+% Rotate the coordinates for each echo, according to the 
+% table of rotations stored in  'kviews.txt'
 for trainn = 1:ntrains
     for echon = 1:nechoes
         % Index the transformation matrix for current view
@@ -71,28 +94,78 @@ for trainn = 1:ntrains
         ks(:,:,echon,trainn) = ktraj*T(:,:,mtxi)';
     end
 end
-
+%
 ks = [reshape(ks(:,1,:,:),[],1),reshape(ks(:,2,:,:),[],1),reshape(ks(:,3,:,:),[],1)];
 
 
 % Coil compression:  use SVD to reduce the number of effective coils
 [comp_signal, S, CompressMat] = ir_mri_coil_compress(signal,'ncoil',10);
 
-dim3=[1 1 1]*128;
-CalRadius =0.5
+%%
+% Let's try synthetic data instead
+%%
+load spmT1single.mat
+% load serious3dtraj.mat
+%[signal b1map ] = sim_kspace3d_sense(ks(:,1), ks(:,2), ks(:,3),template(1:2:end, 1:2:end, 1:2:end));
+%save brain_signal.mat signal b1map
 
+%
+[signal b1map ] = sim_kspace3d_sense(ks(:,1), ks(:,2), ks(:,3),phantom3d(128));
+save phantom_signal.mat
+
+%load brain_signal.mat
+load phantom_signal.mat
+load serious3dtraj.mat
+
+comp_signal = signal;
+Ncoils = size(signal,2);
+%%
+dim3=[1 1 1]*64;
+CalRadius = 0.5
+%
+%
 %[allNets rhos] = makeGrappaNet_20230112(half_kx, half_ky, half_kz, half_signal, dim3, 0.9);
 %[allNets rhos] = makeGrappaNet_20220909(half_kx, half_ky, half_kz, half_scaled_signal, dim3, CalRadius);
-[allNets rhos] = makeGrappaNet_20230919(ks(:,1), ks(:,2), ks(:,3), comp_signal, dim3, CalRadius);
 
-[cart_data dens] = GrappaNet_interpolate(allNets, comp_signal, ks, floor(dim3));
+%%
+%[allNets rhos] = makeGrappaNet_20230919(ks(:,1), ks(:,2), ks(:,3), comp_signal, dim3, CalRadius);
+%
+CalRadius = 0.15
+%[allNets rhos] = makeGrappaNet_20231022(ks(:,1), ks(:,2), ks(:,3), comp_signal, dim3, CalRadius);
+[netParms rho] = makeGrappaNet_20231102(ks(:,1), ks(:,2), ks(:,3), comp_signal, dim3, CalRadius);
 
-im_DLI = cartesian_recon3d(cart_data, floor(dim3));
-im_DLI = im_DLI/norm(im_DLI(:));
+%
+%[cart_data cart_data_gd  dens] = GrappaNet_interpolate(allNets, comp_signal, ks, floor(dim3));
+[cart_data cart_data_gd  dens] = GrappaNet_interpolate_20231102(netParms, comp_signal, ks, floor(dim3));
 
+% cn=3; % testing one coil at a time.
+figure
+coils=1:8;
+im_DLI = cartesian_recon3d(cart_data(:,coils) , floor(dim3));
+subplot(211)
 orthoview(im_DLI);
 title('DL interp. Full Data')
 
+
+im_GD = cartesian_recon3d(cart_data_gd(:,coils), floor(dim3));
+subplot(212)
+orthoview(im_GD);
+title('griddata interp. Full Data')
+
+%% a test of the PSF
+%{
+[k1 k1_gd  dens] = GrappaNet_interpolate_20231102(netParms, ones(size(comp_signal)), ks, floor(dim3));
+
+% cn=3; % testing one coil at a time.
+figure
+psf_DLI = cartesian_recon3d(k1 , floor(dim3)/4);
+psf_gd = cartesian_recon3d(k1_gd , floor(dim3)/4);
+psf_DLI =psf_DLI/max(psf_DLI(:));
+psf_gd =psf_gd/max(psf_gd(:));
+orthoview(psf_DLI - psf_gd,'offset',[1 1 1]);
+colorbar
+lbview(psf_DLI - psf_gd);
+%}
 return
 %%
 

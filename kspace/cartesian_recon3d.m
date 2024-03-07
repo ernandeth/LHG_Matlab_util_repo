@@ -35,7 +35,7 @@ for c=1:size(cart_data,2)
     tmp = reshape(cart_data(:,c), dim);
     tmp(isnan(tmp)) = 0;
 
-    tmp = fftshift(fftn(tmp));
+    tmp = fftshift(ifftn(tmp));
     tmp = permute(tmp,[2 1 3]);
 
     % add the squares of the coil images
